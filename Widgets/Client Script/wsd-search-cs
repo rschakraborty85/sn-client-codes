@@ -148,6 +148,7 @@ api.controller = function (
     // RC - change start
     var sysDtFormat = "YYYY-MM-DD HH:mm:ss"; // convert any user format to system
     var start = moment(searchRequestObj.start).format(sysDtFormat);
+    console.log("RC wsd client start " + start);
     var end = moment(searchRequestObj.end).format(sysDtFormat);
     var building_id = searchRequestObj.building;
     var reservable_module_id = searchRequestObj.reservable_module;
@@ -215,7 +216,7 @@ api.controller = function (
       if (_isRtoSelfReserveUser()) {
         // allow to continue
       } else {
-        throw "${You donot have access to view this page}";
+        throw "${You don't have access to view this page}";
       }
       _isUserTravelling(); // on load - check if user tz and building tz is diff
     } catch (ex) {
@@ -681,6 +682,9 @@ api.controller = function (
         //console.log("RC _createReservableWatcher reservables ");
         // monitor filters to retest availability of selected spaces upon change
         var searchRequestObj = wsdStateService.getState("searchRequestObj");
+        console.log(
+          "RC wsd client searchRequestObj " + JSON.stringify(searchRequestObj)
+        );
         wsdReservationBasket.setFilterConstraints({
           start_at: moment(searchRequestObj.start),
           end_at: moment(searchRequestObj.end),

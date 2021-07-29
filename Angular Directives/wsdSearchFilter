@@ -1,5 +1,5 @@
 /** wsdSearchFilter Directive - customized
- * 
+ *
  * Search filter directive. responsible for search execution and filtering reservable
  * Custom type definitions can be found at the bottom of the file.
  * @param {*} $timeout
@@ -147,9 +147,9 @@ function wsdSearchFilter(
       var previousModule = null;
 
       var suggestedStart = wsdUtils
-        // .roundUpDateTime(moment(now))
+        .roundUpDateTime(moment(now))
         // RC - added
-        .roundUpDateTime(tomorrow)
+        // .roundUpDateTime(tomorrow)
         .format(dateTimeFormat);
 
       var lockEndTimeValidation = false; // control whether the end time will be validated
@@ -495,6 +495,7 @@ function wsdSearchFilter(
         $timeout.cancel(timeout);
         timeout = $timeout(function () {
           var start = moment(scope.start.value, dateTimeFormat);
+          console.log("RC wsd directive start " + start.format(dateTimeFormat));
           var end = moment(scope.end.value, dateTimeFormat);
 
           if (type === RSV_DATE_TIME_TYPE.start)
@@ -717,38 +718,7 @@ function wsdSearchFilter(
         }
       }
 
-      /**
-       * Below functions are not touched yet - RC
-       * ****************************************
-       * ****************************************
-       * ****************************************
-       * ****************************************
-       * ****************************************
-       */
-
-      /**
-       * prepare watcher to watch for scope value change and handle frontend accordingly
-       * @private
-       */
-      function _prepareWatchers() {
-        var deregisterGroup = scope.$watchGroup(
-          FILTER_FIELDS,
-          _handleSearchChange,
-          true
-        );
-        watchers.push(deregisterGroup);
-
-        var deregisterMultiWatch = scope.$watch(
-          "isMultiItemSelection",
-          function () {
-            _evaluateRecurringPossibility();
-          },
-          true
-        );
-        watchers.push(deregisterMultiWatch);
-      }
-
-      /**
+      /** RC changed - for end time calculation
        * resolve and prepare filter block for new or editing mode
        * @param {boolean} isEditing - whether the page is loaded in editing mode
        * @param {Reservation} reservation - current reservation if editing mode is on
@@ -760,8 +730,8 @@ function wsdSearchFilter(
           wsdStateService.setState("settingAutoSearchValues", true);
 
           var suggestedEnd = wsdUtils
-            // .roundUpDateTime(moment(now).add(1, "hour"))
-            .roundUpDateTime(moment(tomorrow).add(10, "hour")) //RC - changed
+            .roundUpDateTime(moment(now).add(10, "hour")) // RC - keep default end on same day
+            //.roundUpDateTime(moment(tomorrow).add(10, "hour")) //RC - changed
             .format(dateTimeFormat);
           var suggestedRecurringEndMmt = wsdUtils.roundUpDateTime(
             moment(suggestedEnd).add(1, "month")
@@ -817,6 +787,37 @@ function wsdSearchFilter(
         };
         searchForAvailableReservables(searchOption);
         scope.canSearch = true;
+      }
+
+      /**
+       * Below functions are not touched yet - RC
+       * ****************************************
+       * ****************************************
+       * ****************************************
+       * ****************************************
+       * ****************************************
+       */
+
+      /**
+       * prepare watcher to watch for scope value change and handle frontend accordingly
+       * @private
+       */
+      function _prepareWatchers() {
+        var deregisterGroup = scope.$watchGroup(
+          FILTER_FIELDS,
+          _handleSearchChange,
+          true
+        );
+        watchers.push(deregisterGroup);
+
+        var deregisterMultiWatch = scope.$watch(
+          "isMultiItemSelection",
+          function () {
+            _evaluateRecurringPossibility();
+          },
+          true
+        );
+        watchers.push(deregisterMultiWatch);
       }
 
       /**

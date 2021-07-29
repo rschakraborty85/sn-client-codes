@@ -1,0 +1,14 @@
+{
+  "mode": null,
+  "reservable_module": "9c9bff98db6f2c10ae466c8e139619a0",
+  "building": "a13bafaedb2614500adbc4be13961988",
+  "start": "2021-07-30T02:30:00Z",
+  "end": "2021-07-30T12:30:00Z",
+  "next_item_index": null,
+  "page_size": 8,
+  "include_unavailable_items": false,
+  "include_reservations_within_days": false,
+  "include_standard_services": true,
+  "include_reservable_purposes": true,
+  "sort_by": "a_z"
+}
