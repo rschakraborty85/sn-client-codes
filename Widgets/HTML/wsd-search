@@ -1,0 +1,340 @@
+<!-- wsd-search html template-->
+<div class="row" ng-if="!c.data.isRtoSelfReserveUser">
+  <div class="notification-wrapper" ng-if="c.showNotification">
+    <wsd-notification
+      notification-config="c.notificationConfig"
+      show-notification="c.showNotification"
+    >
+    </wsd-notification>
+  </div>
+</div>
+<div
+  class="wsd-search container-fluid"
+  ng-class="{'edit-mode': c.isEditing, 'wsd-mesp-wrapper': c.isNative}"
+  ng-if="c.data.isRtoSelfReserveUser"
+>
+  <div class="row">
+    <h2>{{::c.title}}</h2>
+    <wsd-search-filter
+      mode="c.mode"
+      reservation="c.reservation"
+      start="start"
+      end="end"
+      day-start="c.data.dayStart"
+      day-end="c.data.dayEnd"
+      page-size="c.options.page_size"
+      init-config="::c.data.initSearchConfig"
+      is-multi-item-selection="c.selectedItems.length > 1"
+      disable-change-location="c.isChangeLocationDisabled()"
+      disable-change-module="c.isEditing || c.selectedItems.length >= 1"
+    >
+    </wsd-search-filter>
+  </div>
+  
+  <div class="row">
+    <div class="notification-wrapper" ng-if="c.showNotification">
+      <wsd-notification
+        notification-config="c.notificationConfig"
+        show-notification="c.showNotification"
+      >
+      </wsd-notification>
+    </div>
+
+    <!-- Suggestions-->
+    <div
+      class="no-recommendations-pane row"
+      ng-if=" !c.searching && !c.wasSearched && !c.hasError"
+    >
+      <div class="center-block text-align-center">
+        <div class="no-recommendation-icon">
+          <i aria-hidden="true" class="fa fa-meh-o"></i>
+        </div>
+      </div>
+      <div class="center-block text-align-center">
+        <p class="no-recommendation-header-text">
+          ${No recommended reservations yet}
+        </p>
+      </div>
+      <div class="center-block text-align-center">
+        <p class="no-recommendation-body-text">
+          ${Once we have an idea of what you are looking for, we will suggest
+          some of your favorite places and things to reserve.}
+        </p>
+      </div>
+    </div>
+
+    <!-- Search results-->
+    <div class="row result-header" ng-if="c.wasSearched">
+      <div class="col-md-12 col-xs-12 header-padding-bottom">
+        <h4 class="name result-title first-letter-cap" ng-if="!c.searchWasAuto">
+          ${Search results}
+        </h4>
+        <div ng-if="c.searchWasAuto" class="auto-search-result-title">
+          <h4>${Find what's available for you}</h4>
+          <p class="auto-search-result-sub-title">
+            {{c.autoSearchResultSubTitle}}
+          </p>
+        </div>
+      </div>
+      <div class="col-xs-12">
+        <div class="result-wrapper row flex-row">
+          <div class="col-md-5 col-xs-12">
+            <div class="filter-and-sort row flex-row">
+              <div class="col-xs-12 header-padding-bottom">
+                <h4
+                  ng-show="c.mappedReservables.length > 0 || !c.isRegularSearch"
+                  class="filter-title"
+                >
+                  <a
+                    ng-click="c.toggleReservableFilter()"
+                    href="javascript:void(0)"
+                    role="button"
+                    aria-label="${'Reservable filter'}"
+                  >
+                    <i class="fa fa-filter" aria-hidden="true"></i>
+                    {{!c.showReservableFilter ? '${Show filters}' : '${Hide
+                    filters}' + ' (' + c.filterCount + ')'}}
+                  </a>
+                </h4>
+              </div>
+            </div>
+          </div>
+          <div
+            class="tab-navigation col-md-7 col-xs-12 flex-row justify-end header-padding-bottom"
+          >
+            <div
+              id="sortBySelect"
+              select2
+              select2-options="c.sortBySelect2Options"
+              ng-model="c.sortBy"
+              ng-change="c.onSortByChange()"
+              class="view-dropdown"
+              aria-label="${Sort by}"
+              disabled="c.sortByDisabled"
+            ></div>
+            <span
+              class="view-toggle hidden-xs text-overflow-ellipsis"
+              ng-class="{'active': c.activeView.type === viewOpt.type}"
+              ng-click="c.toggleViewOption(viewOpt)"
+              ng-repeat="viewOpt in c.viewOptions"
+              ng-attr-title="{{::viewOpt.label}}"
+              tabindex="0"
+            >
+              <i class="fa {{::viewOpt.iconClass}}"></i
+              >&nbsp;&nbsp;{{::viewOpt.label}}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- searching indicator -->
+    <div class="searching-loader" ng-if="c.searching">
+      <i class="fa fa-spin fa-spinner"></i> ${Loading}...
+    </div>
+
+    <div class="notification-wrapper availability-update" ng-if="c.editInfo">
+      <div
+        class="alert"
+        ng-class="c.editInfo.hasAvailabilityError ? 'alert-warning' : 'alert-info'"
+        role="alert"
+      >
+        <i
+          class="fa"
+          ng-class="c.editInfo.hasAvailabilityError ? 'fa-exclamation-triangle' : 'fa-info-circle'"
+          aria-hidden="true"
+        ></i
+        >&nbsp;&nbsp; {{c.editInfo.msg}}
+        <strong>
+          <u
+            ><a
+              href
+              ng-click="c.undoChangesAndBackToReservation()"
+              role="button"
+              aria-label="{{ c.editInfo.msg + ' ${Click to undo}' }}"
+              >{{c.editInfo.actionText}}</a
+            ></u
+          >
+        </strong>
+      </div>
+    </div>
+
+    <div
+      class="result-records"
+      ng-class="{row: c.showReservableFilter}"
+      ng-if="!c.searching && c.wasSearched"
+    >
+      <!-- reservable filter -->
+      <div
+        class="col-md-3 reservable-filter-wrapper"
+        ng-class="{'m-t-xl': c.showReservableFilter && ['schedule','map'].indexOf(c.activeView.type) >= 0 && c.mappedReservables.length > 0}"
+        ng-show="c.showReservableFilter && (c.mappedReservables.length > 0 || !c.isRegularSearch)"
+      >
+        <wsd-reservable-filter></wsd-reservable-filter>
+      </div>
+
+      <!-- card view -->
+      <div
+        ng-class="{'col-md-9': c.showReservableFilter && c.activeView.type === 'card'}"
+      >
+        <div
+          class="card-view row"
+          ng-if="c.activeView.type === 'card' && c.mappedReservables.length > 0"
+        >
+          <div
+            class="col-sm-4 col-xs-12 width-transition"
+            ng-class="c.showReservableFilter ? 'col-md-4' : 'col-md-3'"
+            ng-repeat="item in c.mappedReservables track by item.sys_id"
+          >
+            <wsd-reservable-card
+              image-size="c.options.thumbnail_size"
+              disable-reserve-single="c.isMultiItemSelection"
+              disable-reserve-multi="!c.data.initModuleMultiSelect || c.isOccurrence || c.isRecurring"
+              reserve-reservable="c.reserveReservable(sys_id)"
+              toggle-reservable-selection="c.toggleReservableSelection(item)"
+              reservable="item"
+            >
+            </wsd-reservable-card>
+          </div>
+        </div>
+      </div>
+
+      <!-- ELSE: schedule view -->
+      <div
+        ng-class="{'col-md-9': c.showReservableFilter && c.activeView.type === 'schedule'}"
+      >
+        <div
+          class="schedule-view"
+          ng-if="c.activeView.type === 'schedule' && c.mappedReservables.length > 0"
+        >
+          <wsd-schedule-view
+            end="end"
+            reservables="c.mappedReservables"
+            disable-reserve-single="c.isMultiItemSelection"
+            disable-reserve-multi="!c.data.initModuleMultiSelect || c.isOccurrence || c.isRecurring"
+            reserve-reservable="c.reserveReservable(sys_id)"
+            toggle-reservable-selection="c.toggleReservableSelection(item)"
+            start="start"
+            total-steps="c.scheduleViewTotalStep"
+            sort-by="c.sortBy"
+          >
+          </wsd-schedule-view>
+        </div>
+      </div>
+
+      <!-- ELSE: map view -->
+      <div
+        ng-class="{'col-md-9': c.showReservableFilter && c.activeView.type === 'map'}"
+      >
+        <div
+          class="map-view"
+          ng-if="c.activeView.type === 'map' && c.mappedReservables.length > 0"
+        >
+          <wsd-mappedin-map
+            ng-if="c.showMappedin"
+            map-config="c.mappedinConfig"
+            mappedin-map-data="c.wsdMappedinReservationData"
+            on-space-select="c.onMapSpaceSelect"
+            templates="c.wsdMappedinTemplates"
+            on-floor-change="c.mountWsdMappedinComponent"
+          />
+        </div>
+      </div>
+
+      <!-- load more action -->
+      <div class="load-more-wrapper text-align-center" ng-if="c.hasMore">
+        <button class="btn btn-default" ng-click="c.loadMore()">
+          ${Show more}
+        </button>
+      </div>
+
+      <!-- no results pane -->
+      <div
+        class="no-results-pane"
+        ng-class="{'col-md-9': c.showReservableFilter && c.mappedReservables.length > 0}"
+        ng-if="c.mappedReservables.length <= 0 && c.wasSearched && !c.searching"
+      >
+        <div class="center-block text-align-center">
+          <div class="no-result-icon">
+            <i aria-hidden="true" class="fa fa-search"></i>
+          </div>
+        </div>
+        <div class="center-block text-align-center">
+          <p class="no-result-header-text">{{c.resultMsg.title}}</p>
+        </div>
+        <div class="center-block text-align-center">
+          <p class="no-result-body-text">{{c.resultMsg.msg}}</p>
+        </div>
+      </div>
+
+      <!-- no map pane -->
+      <div
+        class="no-results-pane"
+        ng-class="{'col-md-9': c.showReservableFilter && c.mappedReservables.length > 0}"
+        ng-if="c.activeView.type === 'map' && c.missingSpaceMap && c.wasSearched && !c.searching"
+      >
+        <div class="center-block text-align-center">
+          <div class="no-result-icon">
+            <i aria-hidden="true" class="fa fa-search"></i>
+          </div>
+        </div>
+        <div class="center-block text-align-center">
+          <p class="no-result-header-text">${Map not available}</p>
+        </div>
+        <div class="center-block text-align-center">
+          <p class="no-result-body-text">
+            ${A map is not currently available for this building or floor.}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="selected-items-bar"
+    ng-show="c.isMultiItemSelection"
+    ng-class="{'show-selected-items-bar': c.isMultiItemSelection}"
+  >
+    <div class="row">
+      <div class="col-xs-8 col-left">
+        {{c.selectedItems.length}} items selected
+        <strong
+          ><u
+            ><a
+              href
+              ng-click="c.unSelectAll()"
+              role="button"
+              aria-label="${Unselect all selections}"
+              >${Unselect all}</a
+            ></u
+          ></strong
+        >
+      </div>
+      <div class="col-xs-4 col-right">
+        <button
+          class="btn btn-primary btn-next"
+          ng-disabled="!c.canSubmitReservation"
+          aria-label="${Next}"
+          ng-click="c.reserveReservables()"
+        >
+          ${Next}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/ng-template" id="map-rsv-popup.html">
+    <div class="card-view">
+      <wsd-reservable-card
+        image-size="ctrl.options.thumbnail_size"
+        disable-reserve-single="ctrl.isMultiItemSelection"
+        disable-reserve-multi="ctrl.isOccurrence"
+        reserve-reservable="ctrl.reserveReservable(space.sys_id)"
+        toggle-reservable-selection="ctrl.toggleReservableSelection(space)"
+        reservable="space"
+        extras="extras"
+      >
+      </wsd-reservable-card>
+    </div>
+  </script>
+</div>
