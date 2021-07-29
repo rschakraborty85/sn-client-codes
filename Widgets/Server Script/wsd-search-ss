@@ -66,6 +66,7 @@
       WSDConstants.SYSTEM_PROPERTY.dayStart,
       DEFAULT_DAY_START
     );
+    console.log("RC in widget server data.dayStart " + data.dayStart);
     data.dayEnd = gs.getProperty(
       WSDConstants.SYSTEM_PROPERTY.dayEnd,
       DEFAULT_DAY_END
