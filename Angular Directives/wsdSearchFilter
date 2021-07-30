@@ -131,11 +131,13 @@ function wsdSearchFilter(
       var timeout = $timeout(function () {});
       var dateTimeFormat = wsdUtils.getDateTimeFormat();
       var dateFormat = wsdUtils.getDateFormat();
-      var now = moment().seconds(0).milliseconds(0);
       // RC - changed
       // always set next day as default
+      var now = moment().seconds(0).milliseconds(0);
+      var currentHour = moment().hours();
+      //console.log("RC wsd directive now is " + moment().hours());
+      var nowMorning = moment(now.format(dateFormat) + " " + DEFAULT_DAY_START);
       var tomorrowInSec = moment().add(1, "d").seconds(0).milliseconds(0);
-
       var tomorrow = moment(
         tomorrowInSec.format(dateFormat) + " " + DEFAULT_DAY_START
       );
@@ -145,10 +147,11 @@ function wsdSearchFilter(
       var selectedReservableModule = null;
       var previousBuilding = null;
       var previousModule = null;
-
+      // RC - changed logic below
+      var considerThisTime = nowMorning;
+      if (currentHour >= 17) considerThisTime = tomorrow;
       var suggestedStart = wsdUtils
-        .roundUpDateTime(moment(now))
-        // RC - added
+        .roundUpDateTime(moment(considerThisTime))
         // .roundUpDateTime(tomorrow)
         .format(dateTimeFormat);
 
@@ -730,7 +733,8 @@ function wsdSearchFilter(
           wsdStateService.setState("settingAutoSearchValues", true);
 
           var suggestedEnd = wsdUtils
-            .roundUpDateTime(moment(now).add(10, "hour")) // RC - keep default end on same day
+            .roundUpDateTime(moment(considerThisTime).add(10, "hour")) // RC - keep default end on same day
+            //.roundUpDateTime(moment(now).add(10, "hour"))
             //.roundUpDateTime(moment(tomorrow).add(10, "hour")) //RC - changed
             .format(dateTimeFormat);
           var suggestedRecurringEndMmt = wsdUtils.roundUpDateTime(
