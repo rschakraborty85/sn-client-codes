@@ -1,9 +1,7 @@
-// sample auto search format 
-// in wsd search page - when we load it
 {
   "mode": null,
-  "reservable_module": "9c9bff98db6f2c10ae466c8e139619a0",
-  "building": "793bafaedb2614500adbc4be139619af",
+  "reservable_module": "e4abf3dcdbaf2c10ae466c8e13961925",
+  "building": "a13bafaedb2614500adbc4be13961988",
   "start": "2021-08-02T02:30:00Z",
   "end": "2021-08-02T12:30:00Z",
   "next_item_index": null,

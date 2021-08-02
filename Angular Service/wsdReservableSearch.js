@@ -4,6 +4,7 @@
  * custom type definitions can be found at the bottom of the file.
  * */
 function wsdReservableSearch($http) {
+  console.log("RC reached wsdReservableSearch");
   var RESERVABLE_SEARCH_BASE_URL = "/api/sn_wsd_rsv/search/reservable";
   var RESERVABLE_AVAILABLITY_BASE_URL = "/api/sn_wsd_rsv/search/availability";
   var RESERVABLE_MODULE_BASE_URL = "/api/sn_wsd_rsv/reservable_module/";
@@ -32,7 +33,7 @@ function wsdReservableSearch($http) {
 
   /**
    * Get a list of available reservables
-   * @param {SearchRequestObject} requestObj - request object that will be used 
+   * @param {SearchRequestObject} requestObj - request object that will be used
    * when making the REST call
    * @returns {Promise<any[]>} - a list with reservable data that is configured
    *  in the reservable module
