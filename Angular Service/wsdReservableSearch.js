@@ -43,6 +43,7 @@ function wsdReservableSearch($http) {
       RESERVABLE_SEARCH_BASE_URL,
       requestObj
     );
+    console.log("RC one click research " + url);
     return $http.get(url).then(_resultParser);
   }
 
@@ -100,6 +101,9 @@ function wsdReservableSearch($http) {
     if (requestObj.sort_by) url += "&sort_by=" + requestObj.sort_by;
 
     if (requestObj.building) url += "&q=building=" + requestObj.building;
+    // RC - added custom query - testing
+    // one click feature
+    if (requestObj.q) url += "^" + requestObj.q;
 
     if (requestObj.floors) url += "^floorIN" + requestObj.floors;
 
