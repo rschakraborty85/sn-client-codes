@@ -789,6 +789,12 @@ function wsdSearchFilter(
         var searchOption = {
           isPaginationSearch: false,
         };
+        // RC - research - one click
+        console.log(
+          "RC - research - one click - editing mode" +
+            JSON.stringify(searchOption)
+        );
+
         searchForAvailableReservables(searchOption);
         scope.canSearch = true;
       }
@@ -1013,6 +1019,9 @@ function wsdSearchFilter(
         _setSearchIndicatorState(searchOption.isPaginationSearch, true);
 
         // execute search request and set availableReservables state.
+        console.log(
+          "RC - one click research " + JSON.stringify(searchRequestObj)
+        );
         return wsdReservableSearch
           .getAvailableReservables(searchRequestObj)
           .then(
