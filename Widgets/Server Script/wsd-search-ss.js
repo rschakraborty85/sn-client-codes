@@ -22,40 +22,55 @@
    * Gets initial batch of reservations and stores in in data object.
    */
   function initialize() {
-    // RC - change start
-    var userUtils = new sn_wsd_rsv.WSDUserUtils();
-    data.isRtoSelfReserveUser = userUtils.isLoggedInUserRtoSelfReserveUser();
-    // RC - change end
-    data.mode = $sp.getParameter("mode");
-    data.reservable_module = $sp.getParameter("reservable_module");
-    data.reservation_id = $sp.getParameter("reservation_id");
-    data.reservation = _loadReservation(data.mode, data.reservation_id);
+    try {
+      try {
+        // RC - change start
+        var userUtils = new sn_wsd_rsv.WSDUserUtils();
+        data.isRtoSelfReserveUser =
+          userUtils.isLoggedInUserRtoSelfReserveUser();
+        // RC - change end
+      } catch (error) {
+        console.log("RC ERROR initialize 1 " + error);
+      }
 
-    data.initSearchConfig = new WSDSearchService().getInitSearchConfig(
-      data.reservable_module
-    );
-    var check = JSON.stringify(data.initSearchConfig) ? "FALSE" : "TRUE";
+      data.mode = $sp.getParameter("mode");
+      data.reservable_module = $sp.getParameter("reservable_module");
+      data.reservation_id = $sp.getParameter("reservation_id");
 
-    // RC - changed
+      data.reservation = _loadReservation(data.mode, data.reservation_id);
+      try {
+        data.initSearchConfig = new WSDSearchService().getInitSearchConfig(
+          data.reservable_module
+        );
+        console.log("RC json " + JSON.stringify(data.initSearchConfig));
+      } catch (error) {
+        console.log("RC ERROR initialize 2 " + error);
+      }
+      var check = JSON.stringify(data.initSearchConfig) ? "FALSE" : "TRUE";
 
-    if (check == "TRUE") {
-      data.initModuleMultiSelect =
-        data.initSearchConfig &&
-        data.initSearchConfig.reservable_module.allow_multi_select == "true"
-          ? true
-          : false;
+      // RC - changed
 
-      data.user_building_tz = data.initSearchConfig.time_zone_info;
-      data.building_area_select_seat = data.initSearchConfig.building
-        .area_select_seat
-        ? "true"
-        : "false";
-      data.module_has_select_seat =
-        data.initSearchConfig.reservable_module.filter_has_select_seat;
+      if (check == "TRUE") {
+        data.initModuleMultiSelect =
+          data.initSearchConfig &&
+          data.initSearchConfig.reservable_module.allow_multi_select == "true"
+            ? true
+            : false;
+
+        data.user_building_tz = data.initSearchConfig.time_zone_info;
+        data.building_area_select_seat = data.initSearchConfig.building
+          .area_select_seat
+          ? "true"
+          : "false";
+        data.module_has_select_seat =
+          data.initSearchConfig.reservable_module.filter_has_select_seat;
+      }
+      // RC - end
+      options.page_size = _getDefaultPageSize();
+      _fetchConfiguredStartEndDay();
+    } catch (error) {
+      console.log("RC ERROR initialize " + error);
     }
-    // RC - end
-    options.page_size = _getDefaultPageSize();
-    _fetchConfiguredStartEndDay();
   }
 
   /**
@@ -66,7 +81,6 @@
       WSDConstants.SYSTEM_PROPERTY.dayStart,
       DEFAULT_DAY_START
     );
-    console.log("RC in widget server data.dayStart " + data.dayStart);
     data.dayEnd = gs.getProperty(
       WSDConstants.SYSTEM_PROPERTY.dayEnd,
       DEFAULT_DAY_END

@@ -1,0 +1,319 @@
+<!-- wsd reservation ng template -->
+<div class="col-sm-8 col-xs-12 add-padding-left-right-10">
+	<div class="reservation-card">
+		<div class="panel panel-default meeting-details">
+			<div class="panel-heading bold-heading">${Reservation details}</div>
+			<div class="content-form">
+				<form id="reservation-form" name="form" novalidate>
+					<div class="row add-margin-left-right-minus-10">
+						<div class="col-xs-12 form-group add-padding-left-right-10"
+							ng-class="{'has-error': form.$submitted && form.subject.$error.required}">
+							<span class="fa fa-asterisk" ng-if="requireSubject"
+								ng-class="form.subject.$error.required ? 'mandatory' : 'mandatory-filled'"
+								title="${Required - Reservation subject}" aria-label="${Required - Reservation subject}"
+								aria-hidden="false">
+							</span>
+							<label for="reservation-subject" aria-label="${Reservation subject}">${Reservation
+								subject}</label>
+							<input class="form-control input-field" id="reservation-subject" name="subject" ng-model="subject"
+								ng-attr-placeholder="{{requireSubject ? '${Subject}' : '${Reservation for} ' + constructReservableName() }}"
+								type="text" ng-required="requireSubject"
+								ng-disabled="reservation && (!reservationAcl.write.fields.subject || !canUserEditReservationDetails())" />
+						</div>
+					</div>
+					<div class="row add-margin-left-right-minus-10">
+						<div class="col-md-12 add-padding-left-right-10">
+							<div class="row add-margin-left-right-minus-10">
+								<div class="col-md-6 add-padding-left-right-10">
+									<div class="form-group"
+										ng-class="{'has-error': form.$submitted && form.sensitivity.$error.required}">
+										<span class="fa fa-asterisk"
+											ng-class="form.sensitivity.$error.required ? 'mandatory' : 'mandatory-filled'"
+											title="${Required - Sensitivity}" aria-label="${Required - Sensitivity}"
+											aria-hidden="false">
+										</span>
+										<label for="reservation-sensitivity"
+											aria-label="${Required - Sensitivity}">${Sensitivity}</label>
+										<select id="reservation-sensitivity" name="sensitivity" ng-model="sensitivity"
+											placeholder="${Select sensitivity}" select-2-options="{}" select2 required
+											ng-disabled="reservation && (!reservationAcl.write.fields.sensitivity || !canUserEditReservationDetails())">
+											<option value="normal">${Normal}</option>
+											<option value="private">${Private}</option>
+										</select>
+									</div>
+								</div>
+								<div class="col-md-6 add-padding-left-right-10">
+									<div class="form-group">
+										<label aria-label="${On behalf of}">${On behalf of}</label>
+										<!--  -->
+										<sn-record-picker
+											default-query="'active=true^name!=NULL^email!=NULL^u_number!=NULL^emailENDSWITHservicenow.com'"
+											display-field="'name'" field="onBehalfOf" page-size="1500" placeholder="${John Doe}"
+											search-fields="'name'" table="'u_employee'" value-field="'sys_id'"
+											sn-disabled="reservation && (!canEditOnBehalf() || !canUserEditReservationDetails())">
+										</sn-record-picker>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div ng-if="displayNumberOfAttendees">
+						<hr class="m-t-sm" />
+						<div class="row add-margin-left-right-minus-10">
+							<div class="col-md-12 add-padding-left-right-10">
+								<div class="bold-heading m-b">
+									${Number of attendees}
+									<span class="fa fa-info-circle" data-toggle="tooltip" data-placement="top"
+										title="${The physical number of attendees should be less than or equal to the room's max capacity.}"
+										aria-label="${The physical number of attendees should be less than or equal to the room's max capacity.}">
+									</span>
+								</div>
+							</div>
+							<div class="col-md-6 add-padding-left-right-10"
+								ng-repeat="reservable in reservables track by reservable.sys_id">
+								<div class="form-group">
+									<label for="reservation-number-of-attendees-{{::reservable.sys_id}}"
+										title="{{::reservable.name}}"
+										aria-label="${Number of attendees} for {{::reservable.name}}"
+										class="text-overflow-ellipsis">
+										{{::reservable.name}}
+									</label>
+									<input class="form-control input-field"
+										id="reservation-number-of-attendees-{{::reservable.sys_id}}"
+										ng-model="numberOfAttendees[reservable.sys_id]"
+										ng-change="validateAttendeeCount(reservable.sys_id)" placeholder="1" type="number"
+										ng-model-options="{updateOn: 'blur'}" />
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="clearfix"></div>
+				</form>
+			</div>
+		</div>
+		<div class="panel panel-default room-details">
+			<div class="panel-heading bold-heading">${Room details}</div>
+			<div class="content-wrap reservable" ng-repeat="reservable in reservables track by reservable.sys_id">
+				<div class="row add-margin-left-right-minus-10">
+					<div class="col-md-4 add-padding-left-right-10">
+						<div ng-style="::{'background-image': reservable.imageUrl}" class="image-wrapper">
+							<div ng-if="reservable.require_approval" class="highlighted-label">
+								<i class="fa fa-lock m-r-xs"></i>${Requires approval}
+							</div>
+							<div class="gradient gradient-transparent-black">
+								<div class="text-overflow-ellipsis"
+									title="{{::reservable.campus.display_value}}, {{::reservable.building.display_value}}, {{::reservable.floor.display_value}}">
+									{{::reservable.campus.display_value}},
+									{{::reservable.building.display_value}},
+									{{::reservable.floor.display_value}}
+								</div>
+								<h4 class="text-overflow-ellipsis name" title="{{::reservable.name}}">
+									{{::reservable.name}}
+								</h4>
+							</div>
+						</div>
+						<div ng-if="isExtraServicesEnabled(reservable)" class="dropdown m-t extra-services">
+							<button class="btn btn-default btn-block dropdown-toggle" type="button" aria-haspopup="true"
+								aria-expanded="true" aria-label="${Add extra services}" data-toggle="dropdown">
+								${Add extra services}
+								<i class="fa fa-caret-down" aria-hidden="true"></i>
+							</button>
+							<ul class="dropdown-menu padder-v width-100">
+								<li ng-repeat="flexibleService in reservable.flexible_services track by $index">
+									<a class="dropdown-action" href="javascript:void(0)"
+										ng-click="openExtraServicesModal(reservable.sys_id, flexibleService)">
+										{{::flexibleService.label}}
+									</a>
+								</li>
+							</ul>
+						</div>
+					</div>
+					<div class="col-md-8 add-padding-left-right-10">
+						<div class="row add-margin-left-right-minus-10">
+							<div class="col-md-12 add-padding-left-right-10 m-b" ng-if="reservable.description">
+								<div class="reservable-description">
+									{{::reservable.description}}
+								</div>
+							</div>
+							<div class="col-md-12 add-padding-left-right-10 additional-details" ng-if="reservable.capacity">
+								<div class="row">
+									<div class="col-xs-1 icon-wrapper text-muted">
+										<i class="fa fa-users" data-toggle="tooltip" data-placement="top" aria-label="${Capacity}"
+											title="${Capacity}">
+										</i>
+									</div>
+									<div class="col-xs-11">{{::reservable.capacity}}</div>
+								</div>
+							</div>
+							<div class="col-md-12 add-padding-left-right-10 additional-details"
+								ng-if="reservable.serviceDetails.fullStr">
+								<div class="row">
+									<div class="col-xs-1 icon-wrapper text-muted">
+										<i class="fa fa-list" data-toggle="tooltip" data-placement="top"
+											aria-label="${Standard services}" title="${Standard services}">
+										</i>
+									</div>
+									<div class="col-xs-11 standard-services">
+										{{::reservable.serviceDetails.fullStr}}
+									</div>
+								</div>
+							</div>
+							<div class="col-md-12 add-padding-left-right-10 additional-details"
+								ng-if="reservable.purposeDetails.fullStr">
+								<div class="row">
+									<div class="col-xs-1 icon-wrapper text-muted">
+										<i class="fa fa-tags" data-toggle="tooltip" data-placement="top"
+											aria-label="${Reservable purposes}" title="${Reservable purposes}">
+										</i>
+									</div>
+									<div class="col-xs-11 reservable-purposes">
+										{{::reservable.purposeDetails.fullStr}}
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-12">
+						<div class="loading m-t" ng-if="mode === 'edit' && isProcessingExtraServices">
+							<i class="fa fa-spinner fa-spin fa-fw"></i> ${Processing extra
+							services}
+							<span class="sr-only">${Processing extra services}</span>
+						</div>
+						<div class="extra-services-summary m-t-lg"
+							ng-repeat="(key, val) in addedExtraServices[reservable.sys_id]"
+							ng-if="val.addedServices && val.addedServices.length > 0 && hasActiveExtraServices(val.addedServices)">
+							<wsd-extra-services-summary service="val" edit-service="openExtraServicesModal"
+								start-expanded="true" template="wsdExtraServicesSummaryReservationTemplate"
+								remove-category-service="removeCategoryExtraServicesFromReservable" disable-actions="false">
+							</wsd-extra-services-summary>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="col-sm-4 col-xs-12 add-padding-left-right-10">
+	<div class="confirmation-details">
+		<div class="content-wrap">
+			<h4>${Reservation date & time}</h4>
+			<div class="labeled-values">
+				<div ng-if="shift" class="col-sm-12 add-padding-left-right-10"
+					ng-class="{'col-xs-6 col-md-6': recurringPattern, 'col-xs-12 col-md-12': !recurringPattern}">
+					<label aria-label="${Start date}">${Start date}</label>
+					<div>
+						{{::getDateInFormat(recurringPattern ? recurringPattern.startDate :
+              start)}}
+					</div>
+				</div>
+				<div ng-if="shift && recurringPattern" class="col-xs-6 col-sm-12 col-md-6 add-padding-left-right-10">
+					<label aria-label="${End date}">${End date}</label>
+					<div>{{::getDateInFormat(recurringPattern.options.endDate)}}</div>
+				</div>
+				<div ng-if="shift" class="col-xs-6 col-sm-12 col-md-6 add-padding-left-right-10">
+					<label aria-label="${Duration}">${Duration}</label>
+					<div>{{::getHumanizedTimeDuration(start, end)}}</div>
+				</div>
+				<div ng-if="shift" class="col-xs-6 col-sm-12 col-md-6 add-padding-left-right-10">
+					<label aria-label="${Shift schedule}">${Shift schedule}</label>
+					<div class="text-overflow-ellipsis" title="{{::shift.name}}">
+						{{::shift.name !== '' ? shift.name : '-'}}
+					</div>
+				</div>
+				<div ng-if="!shift" class="col-xs-6 col-sm-12 col-md-6 add-padding-left-right-10">
+					<label aria-label="${Start date and time}">${Start date and time}</label>
+					<div>{{::getDateTimeInFormat(start)}}</div>
+				</div>
+				<div ng-if="!shift" class="col-xs-6 col-sm-12 col-md-6 add-padding-left-right-10">
+					<label aria-label="${End date and time}">${End date and time}</label>
+					<div>{{::getDateTimeInFormat(end)}}</div>
+				</div>
+				<div ng-if="shift" class="col-xs-12 col-sm-12 col-md-12 add-padding-left-right-10">
+					<label aria-label="${Shift details}">${Shift details}</label>
+					<div class="text-overflow-ellipsis white-space-normal" title="{{::shift.shiftDetails}}">
+						{{::shift.shiftDetails !== '' ? shift.shiftDetails : '-'}}
+					</div>
+				</div>
+				<div ng-if="(mode !== 'edit' || !mode) && recurringPattern"
+					class="col-xs-6 col-sm-12 add-padding-left-right-10">
+					<label aria-label="${Recurrence}">${Recurrence}</label>
+					<div>
+						<i class="fa fa-repeat m-r-xs text-muted" aria-label="Recurrence"></i>&nbsp; {{recurringPattern.label || '${Unable to load the recurring
+              details}'}}
+					</div>
+				</div>
+				<div ng-if="!shift" class="col-xs-6 col-sm-12 col-md-6 add-padding-left-right-10">
+					<label aria-label="${Duration}">${Duration}</label>
+					<div>{{::getHumanizedTimeDuration(start, end)}}</div>
+				</div>
+				<div class="col-xs-6 col-sm-12 col-md-6" ng-if="mode === 'edit'">
+					<label aria-label="${Reserved from}">${Reserved from}</label>
+					<div class="icon-value">
+						<i class="m-r-xs source-icon" ng-if="reservation.source_icon.classNames"
+							ng-class="::reservation.source_icon.classNames" data-toggle="tooltip" data-placement="top"
+							aria-label="{{::reservation.source_icon.tooltip}}" title="{{::reservation.source_icon.tooltip}}">
+						</i>
+						<div>{{::reservation.source.display_value || '-'}}</div>
+					</div>
+				</div>
+				<div ng-if="canUserEditReservationDetails()" class="col-xs-12 text-primary">
+					<a href="javascript:void(0)" ng-click="redirectToSearchPage(true)"
+						aria-label="${Change reservation time or location}">
+						${Change reservation time}
+					</a>
+				</div>
+				<div class="clearfix"></div>
+			</div>
+			<!-- Submit button -->
+			<button class="btn btn-primary btn-block" form="reservation-form" ng-class="{disabled: disableButton}"
+				ng-click="createReservation()" ng-if="!reservation && mode !== 'edit'" type="submit"
+				aria-label="${Submit reservation}">
+				${Submit reservation}
+				<span class="loading" ng-if="isLoading">
+					<i class="fa fa-spinner fa-spin fa-fw"></i>
+					<span class="sr-only">${Loading...}</span>
+				</span>
+			</button>
+			<!-- Update button -->
+			<button class="btn btn-primary btn-block" form="reservation-form" ng-class="{disabled: disableButton}"
+				ng-click="updateReservation()" ng-if="reservation && mode === 'edit'" type="submit"
+				aria-label="${Update reservation}">
+				${Update reservation}
+				<span class="loading" ng-if="isLoading">
+					<i class="fa fa-spinner fa-spin fa-fw"></i>
+					<span class="sr-only">${Loading...}</span>
+				</span>
+			</button>
+			<!-- Go back button (show only if new mode) -->
+			<button class="btn btn-default btn-block" ng-click="redirectToSearchPage()" ng-if="mode !== 'edit'"
+				aria-label="${Go back}" role="button">
+				${Go back}
+			</button>
+			<!-- Go back button (show only if edit mode)-->
+			<button class="btn btn-default btn-block" ng-click="handleCancelPress()" ng-if="mode === 'edit'"
+				aria-label="${Cancel}" role="button">
+				${Cancel}
+			</button>
+		</div>
+	</div>
+</div>
+<div class="col-sm-4 col-xs-12 add-padding-left-right-10"
+	ng-show="form.subject.$error.required || form.sensitivity.$error.required">
+	<div class="required-information">
+		<div class="content-wrap">
+			<div class="row add-margin-left-right-minus-10">
+				<div>${Required information}</div>
+				<span ng-show="form.subject.$error.required">
+					<span class="sr-only">Required information</span>
+					<label class="label" for="reservation-subject" aria-label="${Required - Reservation subject}"
+						role="button">${Reservation subject}</label>
+				</span>
+				<span ng-show="form.sensitivity.$error.required">
+					<span class="sr-only">Required information</span>
+					<label class="label" for="reservation-sensitivity" aria-label="${Required - Sensitivity}"
+						role="button">${Sensitivity}</label>
+				</span>
+			</div>
+		</div>
+	</div>
+</div>

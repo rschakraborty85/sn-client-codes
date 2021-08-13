@@ -3,228 +3,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
   type: "WSDSearchService",
 
   /**
-   * RC - customized for one click research
-   * Search for available reservable unit based on search filter, reservable type (table & filter), start and end time
-   * @param {GlideDateTime} startGdt - start time in the internal GDT format YYYY-MM-DD HH:mm:ss
-   * @param {GlideDateTime} endGdt - end time in the internal GDT format YYYY-MM-DD HH:mm:ss
-   * @param {boolean} requireApproval - indicate whether the reservable requires an approval flow
-   * @param {string} reservableTable - target table name
-   * @param {string} [reservableFilter] - encoded query that is configured in the reservable module
-   * @param {string} [extraConditions] - extra encoded query that will be used to filter out reservable - should not overlap with the reservable filter
-   * @param {string[]} [reservableColumns] - columns of the reservable record, used as output properties
-   * @param {string} [reservableType] - the type of the reservable, to use when checking reservables.
-   * @param {string} [selectionType] - unit or container
-   * @param {string} [reservableContainerField] - field of the container within the reservable table (example: reservable table is Space, container field is area)
-   * @param {string} [reservableQuantityField] - name of the field to check for reservation capacity.
-   * @param {string} [reservationSysId] - existing reservation sys_id, used to see if trying to adjust meeting etc
-   * @param {string} [reservedReservableIds] - list of reserved sysIds (comma separated)
-   * @param {boolean} [includeUnavailableUnits] - include units that are unavailable
-   * @param {boolean} [includeReservationsWithinDays] - include all reservation of the unit from start of the day, till end of the day based on the given times
-   * @param {boolean} [includeStandardServices] - include standard services if applicable
-   * @param {boolean} [includeReservablePurposes] - include reservable purposes if applicable
-   * @param {number} [nextItemIndex] - the first row to include (indicates the first row index to start windowing) (0 on the first page)
-   * @param {number} [pageSize] - ammount of records to return
-   * @param {?string} [sortBy] - how to sort reservables (anything falsy will skip sorting)
-   * @param {boolean} [requireCostCenterDepartmentCheck] - Check to match space's Cost Center / Department with User's Cost Center / Department while search
-   * @return {ReservableSearchOutput} - search result including filter data and possible container data
-   */
-  searchForReservableUnits: function (
-    startGdt,
-    endGdt,
-    requireApproval,
-    reservableTable,
-    reservableFilter,
-    extraConditions,
-    reservableColumns,
-    reservableType,
-    selectionType,
-    reservableContainerField,
-    reservableQuantityField,
-    reservationSysId,
-    reservedReservableIds,
-    includeUnavailableUnits,
-    includeReservationsWithinDays,
-    includeStandardServices,
-    includeReservablePurposes,
-    nextItemIndex,
-    pageSize,
-    sortBy,
-    requireCostCenterDepartmentCheck
-  ) {
-    var reservableSearchOutput = {
-      hasMore: false,
-      reservableUnits: [],
-      reservableContainers: [],
-      nextItemIndex: -1,
-    };
-    var hasReservedReservables = !WSDUtils.nullOrEmpty(reservedReservableIds);
-    var hasNextItemIndex =
-      typeof nextItemIndex === "number" && !isNaN(nextItemIndex);
-    var searchLimit = this.getSearchLimit();
-
-    reservableColumns = WSDUtils.arrayHasElement(reservableColumns)
-      ? reservableColumns
-      : ["sys_id", "name"];
-
-    // get the reservables which are reserved first, and only if the call is for the first request (not on pagination, paginated calls will ignore reserved items)
-    if (!hasNextItemIndex && hasReservedReservables) {
-      var resolvedReservedItemsResult = this._fetchReservedUnitsOnSearch(
-        startGdt,
-        endGdt,
-        requireApproval,
-        reservableTable,
-        reservableFilter,
-        reservableColumns,
-        reservableType,
-        selectionType,
-        reservableContainerField,
-        reservableQuantityField,
-        reservationSysId,
-        reservedReservableIds,
-        includeReservationsWithinDays,
-        includeStandardServices,
-        includeReservablePurposes,
-        sortBy
-      );
-
-      reservableSearchOutput.reservableUnits =
-        resolvedReservedItemsResult.reservableUnits;
-      reservableSearchOutput.reservableContainers =
-        resolvedReservedItemsResult.reservableContainers;
-    }
-
-    /** ACTUAL SEARCH */
-    var reservableEQArr = [];
-    var parsedExtraConditions =
-      this._resolveExtraConditionEncodedQuery(extraConditions);
-
-    if (!WSDUtils.nullOrEmpty(reservableFilter))
-      reservableEQArr.push(reservableFilter);
-
-    if (hasReservedReservables)
-      // add ignore included reserved reservables condition
-      reservableEQArr.push("sys_idNOT IN" + reservedReservableIds);
-
-    var reservableEQ = reservableEQArr.join("^").replace(/\^EQ/, "");
-
-    // get page size
-    if (typeof pageSize !== "number" || isNaN(pageSize))
-      pageSize = WSDUtils.getDefaultPageSize();
-
-    // verify nextItemIndex
-    var windowStart = 0;
-    if (hasNextItemIndex && nextItemIndex >= 0) windowStart = nextItemIndex;
-
-    var windowEnd = windowStart + searchLimit;
-
-    var reservableGr = new GlideRecord(reservableTable);
-    // when reservableEQ is empty or invalid, fall back to default
-    if (!WSDUtils.nullOrEmpty(reservableEQ))
-      reservableGr.addEncodedQuery(reservableEQ);
-
-    this._addApplicableReservableTableQuery(
-      reservableGr,
-      parsedExtraConditions
-    );
-
-    if (sortBy) {
-      var sortByField =
-        selectionType ===
-        WSDConstants.RESERVABLE_MODULE_SELECTION_TYPE.container
-          ? reservableContainerField
-          : this.DEFAULT_SORT_FIELD;
-      this._addSortQuery(sortBy, reservableGr, sortByField);
-    }
-
-    reservableGr.chooseWindow(windowStart, windowEnd);
-
-    // Assignment Type and Cost Center / Department queries
-    if (this._isSpaceMgmtApplicable(reservableType))
-      this._addSpaceMgmtQueries(
-        reservableGr,
-        parsedExtraConditions,
-        requireCostCenterDepartmentCheck
-      );
-
-    if (
-      selectionType ===
-        WSDConstants.RESERVABLE_MODULE_SELECTION_TYPE.container &&
-      reservableContainerField
-    )
-      reservableGr.addNotNullQuery(reservableContainerField);
-
-    gs.info(
-      "RC one click - query for search at api " + reservableGr.getEncodedQuery()
-    );
-
-    reservableGr.query();
-
-    WSDLogger.debug(
-      "WSDSearchServiceSNC.searchForReservableUnits",
-      "Constructed (primary) query on search",
-      {
-        table: reservableTable,
-        encodedQuery: reservableGr.getEncodedQuery(),
-      }
-    );
-
-    // adding one to check if there is more to request to load
-    var pageSizePlusOne =
-      pageSize - reservableSearchOutput.reservableUnits.length + 1;
-
-    // get the reservables
-    var resolvedItemsResult = this._resolveReservablesByGr(
-      reservableGr,
-      startGdt,
-      endGdt,
-      requireApproval,
-      pageSizePlusOne,
-      reservableColumns,
-      reservableType,
-      parsedExtraConditions,
-      reservationSysId,
-      includeUnavailableUnits,
-      includeReservationsWithinDays,
-      includeStandardServices,
-      includeReservablePurposes,
-      selectionType,
-      reservableContainerField,
-      reservableQuantityField,
-      reservableSearchOutput.reservableContainers
-    );
-
-    var allPossibleMatchedItems = reservableSearchOutput.reservableUnits.concat(
-      resolvedItemsResult.reservableUnits
-    );
-
-    // resolve and construct the applicable filter data that matches reservables result
-    reservableSearchOutput.filter = this._resolveAndConstructFilterData(
-      reservableType,
-      allPossibleMatchedItems
-    );
-    reservableSearchOutput.totalProcessed = resolvedItemsResult.totalProcessed;
-
-    reservableSearchOutput.reservableUnits = allPossibleMatchedItems.filter(
-      function (item) {
-        return item.includedInResult || item.is_reserved;
-      }
-    );
-
-    // resolve possible pagination data
-    reservableSearchOutput.hasMore =
-      reservableSearchOutput.reservableUnits.length >= pageSizePlusOne;
-    if (reservableSearchOutput.hasMore) {
-      reservableSearchOutput.reservableUnits.pop();
-      // nextItemIndex is subtracted by one the 'recordProcessedForResult' includes the index nextItemIndex is at.
-      var supposedStartIndex = windowStart - 1;
-      reservableSearchOutput.nextItemIndex =
-        supposedStartIndex + resolvedItemsResult.recordProcessedForResult;
-    }
-
-    return reservableSearchOutput;
-  },
-
-  /**
    * RC - override testing
    * For the glideRecord provided, process for available reservable units based on search filter, start and end time
    * @param {GlideRecord} reservableGr - GlideRecord to get reservables from
@@ -491,21 +269,25 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
    * @returns {InitSearchConfig}
    */
   getInitSearchConfig: function (preSelectedReservableModule) {
-    var searchObj;
-    var searchObjStr = gs
-      .getUser()
-      .getPreference(WSDConstants.USER_PREFERENCE.lastSearchRequest);
-    //gs.info("RC searchObjStr " + searchObjStr.toString());
-    if (!searchObjStr || searchObjStr.length === 0)
-      searchObj = this.getFirstSearchConfig();
-    else searchObj = JSON.parse(searchObjStr);
+    try {
+      var searchObj;
+      var searchObjStr = gs
+        .getUser()
+        .getPreference(WSDConstants.USER_PREFERENCE.lastSearchRequest);
+      //gs.info("RC searchObjStr " + searchObjStr.toString());
+      if (!searchObjStr || searchObjStr.length === 0)
+        searchObj = this.getFirstSearchConfig();
+      else searchObj = JSON.parse(searchObjStr);
 
-    // if user has supplied a pre selected module via the url, overwrite this.
-    if (preSelectedReservableModule) {
-      searchObj.reservable_module = preSelectedReservableModule;
+      // if user has supplied a pre selected module via the url, overwrite this.
+      if (preSelectedReservableModule) {
+        searchObj.reservable_module = preSelectedReservableModule;
+      }
+
+      return this._resolveSearchConfigData(searchObj);
+    } catch (error) {
+      gs.error("Error in getInitSearchConfig function " + error);
     }
-
-    return this._resolveSearchConfigData(searchObj);
   },
   // RC
   getBuildingGrObject: function (buildingSysId) {

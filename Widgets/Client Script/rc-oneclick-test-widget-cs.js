@@ -29,6 +29,7 @@ api.controller = function (wsdReservableSearch) {
       include_standard_services: true,
       include_reservable_purposes: true,
       sort_by: "a_z",
+      q: "active=true^sys_class_name=sn_wsd_core_space^sys_id=e559b7e2dbaa9450ee0a43c813961981",
     };
 
     wsdReservableSearch
