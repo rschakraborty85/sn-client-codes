@@ -197,36 +197,43 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
    */
 
   _resolveSearchConfigData: function (searchObj) {
-    if (!searchObj) return {};
-    //gs.info("RC searchObj " + JSON.stringify(searchObj));
-    var searchObjWithDisplay = {};
-    if (searchObj.building) {
-      searchObjWithDisplay.building = this.getBuildingFromId(
-        searchObj.building
-      );
-      searchObjWithDisplay.time_zone_info = this.getUserBuildingTZ(
-        searchObj.building
-      );
-    }
-
-    if (searchObj.reservable_module)
-      searchObjWithDisplay.reservable_module =
-        this.reservableModuleService.getReservableModuleAsChoiceById(
-          searchObj.reservable_module
+    try {
+      if (!searchObj) return {};
+      //gs.info("RC searchObj " + JSON.stringify(searchObj));
+      var searchObjWithDisplay = {};
+      if (searchObj.building) {
+        searchObjWithDisplay.building = this.getBuildingFromId(
+          searchObj.building
         );
-
-    if (searchObj.shift) {
-      // fetch shift data
-      searchObjWithDisplay.shift =
-        this.shiftService.validateShiftIsAvailableTodayAndGetDetails(
-          searchObj.shift
+        searchObjWithDisplay.time_zone_info = this.getUserBuildingTZ(
+          searchObj.building
         );
+      }
+      try {
+        if (searchObj.reservable_module)
+          searchObjWithDisplay.reservable_module =
+            this.reservableModuleService.getReservableModuleAsChoiceById(
+              searchObj.reservable_module
+            );
+      } catch (error) {
+        gs.error("Error in getReservableModuleAsChoiceById function2 " + error);
+      }
+
+      if (searchObj.shift) {
+        // fetch shift data
+        searchObjWithDisplay.shift =
+          this.shiftService.validateShiftIsAvailableTodayAndGetDetails(
+            searchObj.shift
+          );
+      }
+
+      if (searchObj.sortBy) searchObjWithDisplay.sortBy = searchObj.sortBy;
+
+      //gs.info("RC in WSDSearchService , json looks like " + JSON.stringify(searchObjWithDisplay));
+      return searchObjWithDisplay;
+    } catch (error) {
+      gs.error("Error in _resolveSearchConfigData function " + error);
     }
-
-    if (searchObj.sortBy) searchObjWithDisplay.sortBy = searchObj.sortBy;
-
-    //gs.info("RC in WSDSearchService , json looks like " + JSON.stringify(searchObjWithDisplay));
-    return searchObjWithDisplay;
   },
 
   /**
@@ -269,21 +276,20 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
    * @returns {InitSearchConfig}
    */
   getInitSearchConfig: function (preSelectedReservableModule) {
+    var searchObj;
+    var searchObjStr = gs
+      .getUser()
+      .getPreference(WSDConstants.USER_PREFERENCE.lastSearchRequest);
+    //gs.info("RC searchObjStr " + searchObjStr.toString());
+    if (!searchObjStr || searchObjStr.length === 0)
+      searchObj = this.getFirstSearchConfig();
+    else searchObj = JSON.parse(searchObjStr);
+
+    // if user has supplied a pre selected module via the url, overwrite this.
+    if (preSelectedReservableModule) {
+      searchObj.reservable_module = preSelectedReservableModule;
+    }
     try {
-      var searchObj;
-      var searchObjStr = gs
-        .getUser()
-        .getPreference(WSDConstants.USER_PREFERENCE.lastSearchRequest);
-      //gs.info("RC searchObjStr " + searchObjStr.toString());
-      if (!searchObjStr || searchObjStr.length === 0)
-        searchObj = this.getFirstSearchConfig();
-      else searchObj = JSON.parse(searchObjStr);
-
-      // if user has supplied a pre selected module via the url, overwrite this.
-      if (preSelectedReservableModule) {
-        searchObj.reservable_module = preSelectedReservableModule;
-      }
-
       return this._resolveSearchConfigData(searchObj);
     } catch (error) {
       gs.error("Error in getInitSearchConfig function " + error);

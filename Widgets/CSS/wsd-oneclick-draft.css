@@ -1,0 +1,96 @@
+.oc_rsv_button {
+  margin-top: 10px;
+  margin-left: 15px;
+}
+.oc_rsv_status {
+  /* 1 Overdue */
+
+  /* position: absolute;
+    left: 0%;
+    right: 0%;
+    top: -1.49%;
+    bottom: 11.01%; */
+
+  /* Label */
+
+  font-family: Source Sans Pro;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 12px;
+  line-height: 22px;
+  /* or 183% */
+
+  display: block;
+  align-items: center;
+  text-align: center;
+  text-transform: capitalize;
+
+  /* Primary/Green-500 */
+
+  color: #293e40;
+}
+.oc_header {
+  /* position: absolute;
+    width: 368px;
+    height: 27px;
+    left: 27px;
+    top: 300px; */
+
+  /* Heading 5 */
+
+  font-family: Source Sans Pro;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 24px;
+  /* or 150% */
+
+  /* Primary/Green-500 */
+
+  color: #293e40;
+}
+.oc_gap {
+  margin-top: 2.5rem;
+  margin-bottom: 0px;
+  margin-left: 10px;
+}
+/* Rectangle 9 */
+.bullet {
+  position: absolute;
+  height: 5px;
+  left: 6.14%;
+  right: 92.73%;
+  top: 357px;
+
+  /* Primary/Green-200 */
+  border: 1px solid #55b9a5;
+  box-sizing: border-box;
+  border-radius: 1.41px;
+}
+
+.oc_seat {
+  /* 3260 Jay St. Santa C */
+
+  /* position: absolute;
+    height: 38px;
+    left: 10.68%;
+    right: 51.82%;
+    top: 368px; */
+
+  /* Body 2 */
+
+  font-family: Source Sans Pro;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 14px;
+  line-height: 22px;
+  margin-left: 15px;
+  /* or 157% */
+
+  /* display: flex; */
+  align-items: center;
+
+  /* Gray/Gray-700 */
+
+  color: #666666;
+}
