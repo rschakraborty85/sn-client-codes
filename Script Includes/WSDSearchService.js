@@ -2,6 +2,42 @@ var WSDSearchService = Class.create();
 WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
   type: "WSDSearchService",
 
+  // RC - overriding for testing
+  SEARCHABLE_LOCATION_COLUMNS: [
+    "floor",
+    "building",
+    "capacity",
+    "email",
+    "sys_class_name",
+    "sys_id",
+  ],
+  /**
+   * RC Overriding for testing
+   * preparing search gliderecord on reservable table by taking parsed extra condition array and apply that to the reservable gliderecord
+   * @param {GlideRecord} reservableGr - target reservable table glideRecord
+   * @param {ParsedCondition[]|undefined} parsedExtraConditions - parsed conditions
+   * @private
+   */
+  _addApplicableReservableTableQuery: function (
+    reservableGr,
+    parsedExtraConditions
+  ) {
+    gs.info(
+      "RC parsedExtraConditions " + JSON.stringify(parsedExtraConditions)
+    );
+    if (!parsedExtraConditions) return;
+
+    for (var j = 0; j < parsedExtraConditions.length; j++) {
+      var parsedCondition = parsedExtraConditions[j];
+      if (parsedCondition.isPrimaryCondition)
+        reservableGr.addQuery(
+          parsedCondition.key,
+          parsedCondition.operation,
+          parsedCondition.value
+        );
+    }
+  },
+
   /**
    * RC - override testing
    * For the glideRecord provided, process for available reservable units based on search filter, start and end time

@@ -30,7 +30,7 @@
           userUtils.isLoggedInUserRtoSelfReserveUser();
         // RC - change end
       } catch (error) {
-        console.log("RC ERROR initialize 1 " + error);
+        // console.log("RC ERROR initialize 1 " + error);
       }
 
       data.mode = $sp.getParameter("mode");
@@ -42,9 +42,11 @@
         data.initSearchConfig = new WSDSearchService().getInitSearchConfig(
           data.reservable_module
         );
-        console.log("RC json " + JSON.stringify(data.initSearchConfig));
+        console.log(
+          "RC initSearchConfig json " + JSON.stringify(data.initSearchConfig)
+        );
       } catch (error) {
-        console.log("RC ERROR initialize 2 " + error);
+        // console.log("RC ERROR initialize 2 " + error);
       }
       var check = JSON.stringify(data.initSearchConfig) ? "FALSE" : "TRUE";
 
