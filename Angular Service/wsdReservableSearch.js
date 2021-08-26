@@ -10,6 +10,9 @@ function wsdReservableSearch($http) {
   var RESERVABLE_MODULE_BASE_URL = "/api/sn_wsd_rsv/reservable_module/";
   var RESERVABLE_SEARCH_RESERVATION_URL =
     "/api/sn_wsd_rsv/reservation/check_existing_reservation";
+  // RC - added new url for suggestion model api
+  var RESERVABLE_SEARCH_SUGGESTED_SEAT_URL =
+    "/api/sn_wsd_rsv/search/suggested_seat";
 
   /**
    * RC - added new function
@@ -19,6 +22,23 @@ function wsdReservableSearch($http) {
   function checkExistingReservation(requestObj) {
     var url = RESERVABLE_SEARCH_RESERVATION_URL;
     return $http.post(url, requestObj).then(_resultParser);
+  }
+
+  /**
+   * RC - overriding this to get one click reservation done
+   * @param {SearchRequestObject} requestObj - request object that will be used
+   * when making the REST call
+   * @returns {Promise<any[]>} - a list with reservable data that is configured
+   *  in the reservable module
+   */
+  function getSuggestedSeat(requestObj) {
+    console.log("RC - calling api " + JSON.stringify(requestObj));
+    var url = _constructSearchReservablesQueryStr(
+      RESERVABLE_SEARCH_SUGGESTED_SEAT_URL,
+      requestObj
+    );
+    //console.log("RC one click research " + url);
+    return $http.get(url).then(_resultParser);
   }
 
   /**
@@ -39,11 +59,15 @@ function wsdReservableSearch($http) {
    *  in the reservable module
    */
   function getAvailableReservables(requestObj) {
+    console.log(
+      "RC getAvailableReservables function , query json for one click " +
+        JSON.stringify(requestObj)
+    );
     var url = _constructSearchReservablesQueryStr(
       RESERVABLE_SEARCH_BASE_URL,
       requestObj
     );
-    console.log("RC one click research " + url);
+    //console.log("RC one click research " + url);
     return $http.get(url).then(_resultParser);
   }
 
@@ -101,8 +125,9 @@ function wsdReservableSearch($http) {
     if (requestObj.sort_by) url += "&sort_by=" + requestObj.sort_by;
 
     if (requestObj.building) url += "&q=building=" + requestObj.building;
+
     // RC - added custom query - testing
-    // one click feature
+    // one click feature - force to consider our query
     if (requestObj.q) url += "^" + requestObj.q;
 
     if (requestObj.floors) url += "^floorIN" + requestObj.floors;
@@ -134,6 +159,7 @@ function wsdReservableSearch($http) {
     getAvailableReservables: getAvailableReservables,
     checkReservablesAvailabilities: checkReservablesAvailabilities,
     checkExistingReservation: checkExistingReservation,
+    getSuggestedSeat: getSuggestedSeat,
   };
 
   /**

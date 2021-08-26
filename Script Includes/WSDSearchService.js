@@ -2,7 +2,7 @@ var WSDSearchService = Class.create();
 WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
   type: "WSDSearchService",
 
-  // RC - overriding for testing
+  // RC - overriding for testing -- added class and sysid field to make primary condition
   SEARCHABLE_LOCATION_COLUMNS: [
     "floor",
     "building",
@@ -11,6 +11,58 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
     "sys_class_name",
     "sys_id",
   ],
+  /**
+   * Not ideal logic but will work as of now - 24th aug 21
+   * find module based on area select = true / false of building
+   * @param {sys_id/string} buildingID
+   * @returns {Object} building and reservable module
+   */
+  getReservableModuleAndBuilding: function (buildingID) {
+    gs.info("RC function called");
+    var AREA_TRUE = gs.getProperty(
+      "sn_wsd_rsv.reservable_module.query.area_select_true"
+    );
+    var AREA_FALSE = gs.getProperty(
+      "sn_wsd_rsv.reservable_module.query.area_select_false"
+    );
+    var buildingModuleObj = this.getBuildingFromId(buildingID);
+    gs.info("RC Building " + JSON.stringify(buildingModuleObj));
+
+    var moduleGr = new GlideRecord(WSDConstants.TABLES.ReservableModule.name);
+
+    if (buildingModuleObj.area_select_seat) {
+      moduleGr.addEncodedQuery(AREA_TRUE);
+    } else if (!buildingModuleObj.area_select_seat) {
+      moduleGr.addEncodedQuery(AREA_FALSE);
+    }
+    moduleGr.query();
+    while (moduleGr.next()) {
+      var id = moduleGr.sys_id + "";
+      if (this._userCanAccessModule(id)) {
+        buildingModuleObj.reservable_module = id;
+        return JSON.stringify(buildingModuleObj);
+      }
+    }
+  },
+  /**
+   * check if user can access a given reservable module
+   * got reference from WSDReservationValidatorSNC > validateReservableModule
+   * @param {String/sys_id} reservableModuleId
+   * @returns
+   */
+  _userCanAccessModule: function (reservableModuleId) {
+    var userCriteriaUtils = new WSDUserCriteriaUtils();
+    var userCriteriaAccess = userCriteriaUtils.canAccess(
+      WSDConstants.TABLES.ModuleUserCriteria.name,
+      "reservable_module",
+      reservableModuleId
+    );
+
+    if (userCriteriaAccess) {
+      return true;
+    }
+    return false;
+  },
   /**
    * RC Overriding for testing
    * preparing search gliderecord on reservable table by taking parsed extra condition array and apply that to the reservable gliderecord
