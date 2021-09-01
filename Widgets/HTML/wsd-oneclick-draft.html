@@ -15,10 +15,17 @@
     </ul>
     <span class="oc_rsv_status">${Pending}</span>
     <div class="oc_seat">
-      <div>${Building 1 - Floor 5}</div>
-      <div>${Space: A1.101}</div>
+      <div>
+        ${Building }{{c.result.seat_building_label}}${ - Floor
+        }{{c.result.seat_floor_label}}
+      </div>
+      <div>${Space: }{{c.result.seat_space_label}}</div>
     </div>
-    <div class="oc_rsv_button"><a href="javascript:void(0)">Reserve</a></div>
+    <div class="oc_rsv_button" ng-show="c.result.seat_space_label">
+      <a href="javascript:void(0)" ng-click="c.redirectToReservation()"
+        >Reserve</a
+      >
+    </div>
     <br />
     <ul class="fa-ul list oc_gap">
       <li>

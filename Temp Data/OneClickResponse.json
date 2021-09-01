@@ -1,0 +1,62 @@
+{
+  "sys_id": "35143362db6a9450ee0a43c8139619d6",
+  "external_id": "A7.0162",
+  "email": null,
+  "name": "A7.0162",
+  "description": null,
+  "image": null,
+  "number": "SPCE0003010",
+  "campus": {
+    "sys_id": "f90b2baedb2614500adbc4be1396196c",
+    "display_value": "Hyderabad, Knowledge City"
+  },
+  "building": {
+    "sys_id": "a13bafaedb2614500adbc4be13961988",
+    "display_value": "A"
+  },
+  "floor": {
+    "sys_id": "be5b27eedb2614500adbc4be13961943",
+    "display_value": "7"
+  },
+  "area": {
+    "sys_id": "2aebe9b1db92385058e325091396191f",
+    "display_value": "Finance"
+  },
+  "capacity": null,
+  "reservable_quantity": "1",
+  "location_type": {
+    "sys_id": "264dd263dbb87410e4ec474d139619f6",
+    "display_value": "Workspace",
+    "name": "Workspace"
+  },
+  "order": null,
+  "requires_check_in": null,
+  "is_reservable": "1",
+  "require_approval": false,
+  "standard_services": [],
+  "reservable_purposes": [],
+  "is_available": true,
+  "reservations": [],
+  "container": {
+    "sys_id": "2aebe9b1db92385058e325091396191f",
+    "display_value": "Finance",
+    "floor": {
+      "sys_id": "be5b27eedb2614500adbc4be13961943",
+      "display_value": "7",
+      "name": "7"
+    },
+    "building": {
+      "sys_id": "a13bafaedb2614500adbc4be13961988",
+      "display_value": "A",
+      "name": "A"
+    },
+    "campus": {
+      "sys_id": "f90b2baedb2614500adbc4be1396196c",
+      "display_value": "Hyderabad, Knowledge City",
+      "name": "Hyderabad, Knowledge City"
+    },
+    "capacity": 0,
+    "image": null
+  },
+  "includedInResult": true
+}

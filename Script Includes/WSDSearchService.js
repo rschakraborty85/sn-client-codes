@@ -18,7 +18,7 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
    * @returns {Object} building and reservable module
    */
   getReservableModuleAndBuilding: function (buildingID) {
-    gs.info("RC function called");
+    //gs.info("RC function called");
     var AREA_TRUE = gs.getProperty(
       "sn_wsd_rsv.reservable_module.query.area_select_true"
     );
@@ -26,7 +26,7 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
       "sn_wsd_rsv.reservable_module.query.area_select_false"
     );
     var buildingModuleObj = this.getBuildingFromId(buildingID);
-    gs.info("RC Building " + JSON.stringify(buildingModuleObj));
+    // gs.info("RC Building " + JSON.stringify(buildingModuleObj));
 
     var moduleGr = new GlideRecord(WSDConstants.TABLES.ReservableModule.name);
 
@@ -74,9 +74,9 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
     reservableGr,
     parsedExtraConditions
   ) {
-    gs.info(
-      "RC parsedExtraConditions " + JSON.stringify(parsedExtraConditions)
-    );
+    // gs.info(
+    //   "RC parsedExtraConditions " + JSON.stringify(parsedExtraConditions)
+    // );
     if (!parsedExtraConditions) return;
 
     for (var j = 0; j < parsedExtraConditions.length; j++) {

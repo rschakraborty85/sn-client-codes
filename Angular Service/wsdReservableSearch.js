@@ -4,7 +4,7 @@
  * custom type definitions can be found at the bottom of the file.
  * */
 function wsdReservableSearch($http) {
-  console.log("RC reached wsdReservableSearch");
+  // console.log("RC reached wsdReservableSearch");
   var RESERVABLE_SEARCH_BASE_URL = "/api/sn_wsd_rsv/search/reservable";
   var RESERVABLE_AVAILABLITY_BASE_URL = "/api/sn_wsd_rsv/search/availability";
   var RESERVABLE_MODULE_BASE_URL = "/api/sn_wsd_rsv/reservable_module/";
@@ -32,7 +32,7 @@ function wsdReservableSearch($http) {
    *  in the reservable module
    */
   function getSuggestedSeat(requestObj) {
-    console.log("RC - calling api " + JSON.stringify(requestObj));
+    // console.log("RC - calling api " + JSON.stringify(requestObj));
     var url = _constructSearchReservablesQueryStr(
       RESERVABLE_SEARCH_SUGGESTED_SEAT_URL,
       requestObj
@@ -59,10 +59,10 @@ function wsdReservableSearch($http) {
    *  in the reservable module
    */
   function getAvailableReservables(requestObj) {
-    console.log(
-      "RC getAvailableReservables function , query json for one click " +
-        JSON.stringify(requestObj)
-    );
+    // console.log(
+    //   "RC getAvailableReservables function , query json for one click " +
+    //     JSON.stringify(requestObj)
+    // );
     var url = _constructSearchReservablesQueryStr(
       RESERVABLE_SEARCH_BASE_URL,
       requestObj

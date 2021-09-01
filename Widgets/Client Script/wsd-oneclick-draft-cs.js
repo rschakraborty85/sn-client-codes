@@ -1,9 +1,24 @@
-api.controller = function (wsdUtils, wsdReservableSearch) {
+api.controller = function (wsdUtils, wsdReservableSearch, $window) {
   /* widget controller */
   var c = this;
+  var searchObj = {};
+  c.result = {};
   //
   _init();
 
+  c.redirectToReservation = function () {
+    //
+    console.log("RC c.result.seat_space_sys_id " + c.result.seat_space_sys_id);
+    $window.location.href =
+      "/ws?id=wsd_reservation&reservable_ids=" +
+      c.result.seat_space_sys_id +
+      "&start=" +
+      searchObj.start +
+      "&end=" +
+      searchObj.end +
+      "&reservable_module=" +
+      searchObj.reservable_module;
+  };
   /**
    *
    */
@@ -25,7 +40,8 @@ api.controller = function (wsdUtils, wsdReservableSearch) {
    */
   function _getSuggestedSeat(resp) {
     //
-    _callSuggestedSeatAPI(_buildSearchObject(resp));
+    var test = _callSuggestedSeatAPI(_buildSearchObject(resp));
+    console.log("RC after parse " + JSON.stringify(test));
   }
 
   /**
@@ -34,19 +50,36 @@ api.controller = function (wsdUtils, wsdReservableSearch) {
    */
   function _callSuggestedSeatAPI(searchObj) {
     //
-    // console.log("RC - before calling api " + JSON.stringify(searchObj));
+    //console.log("RC - before calling api " + JSON.stringify(searchObj));
     wsdReservableSearch.getSuggestedSeat(searchObj).then(function (response) {
-      console.log("RC lets see what we get " + JSON.stringify(response));
+      //console.log("RC lets see what we get " + JSON.stringify(response));
+      c.result = _parseResponse(response);
+      return c.result;
     });
   }
 
   /**
    *
+   * @param {*} response
+   */
+  function _parseResponse(response) {
+    //
+    var tmpObj = response; //JSON.parse(response);
+    var result = {};
+    result.seat_building_label = tmpObj.building.display_value + "";
+    result.seat_floor_label = tmpObj.floor.display_value + "";
+    result.seat_space_label = tmpObj.name + "";
+    result.seat_space_sys_id = tmpObj.sys_id + "";
+    return result;
+  }
+
+  /**
+   * @param {*} resp
    */
   function _buildSearchObject(resp) {
     //
     // console.log(JSON.stringify(resp));
-    var searchObj = resp.search_object_template;
+    searchObj = resp.search_object_template;
     searchObj.start = resp.current_date_utc.start;
     searchObj.end = resp.current_date_utc.end;
     searchObj.building = resp.building_module_details.user_building_id;

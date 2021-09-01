@@ -6,6 +6,7 @@ WSDSuggestedModelService.prototype = {
     try {
       var mostBookedSeat = this.getMostBookedSeat(gs.getUserID()) + "";
       var lastBookedSeat = this.getLastBookedSeat(gs.getUserID()) + "";
+      var getUsedSeats = this._getAlreadySuggestedSeat() + "";
       var searchStringDefault = String(request.queryParams.q);
       var favSeats = [];
       favSeats.push(mostBookedSeat);
@@ -13,25 +14,122 @@ WSDSuggestedModelService.prototype = {
       if (favSeats.length != 0)
         searchString = searchStringDefault + "^sys_idIN" + favSeats;
       // building query needs to be added
-      // else
-      //   searchString =
+      else searchString = searchStringDefault;
       //     "building=7d3bafaedb2614500adbc4be139619b0^active=true^sys_class_name=sn_wsd_core_space"; // this can never be null // UI will add building query as default
-      gs.info("callReservableAPI == searchString" + searchString);
+      // gs.info("callReservableAPI == searchString" + searchString);
+
       var result = this.callReservableAPI(request, response, searchString);
+      // gs.info("RC is it working " + JSON.stringify(result));
       var favSeatDetails = this.getFirstSpace(result);
       if (
         favSeatDetails != null &&
         favSeatDetails != undefined &&
         favSeatDetails != ""
-      )
+      ) {
+        this._storeSuggestedSpace(favSeatDetails);
         return favSeatDetails;
-      else {
-        return this.getFirstSpace(
+      } else {
+        var tmpStore = this.getFirstSpace(
           this.callReservableAPI(request, response, searchStringDefault)
         );
+        this._storeSuggestedSpace(tmpStore);
+        return tmpStore;
       }
     } catch (ex) {
-      gs.info("getSeatDetails Exception==" + ex);
+      gs.error("getSeatDetails Exception==" + ex);
+    }
+  },
+
+  _getAlreadySuggestedSeat: function () {
+    //u_location.ref_sn_wsd_core_area.building.sys_id=
+    var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
+    tracker.addQuery("u_location.ref_sn_wsd_core_area.building.sys_id",)
+  },
+  /**
+   *
+   * @param {Object} seatDetailsObject
+   * @returns {void}
+   */
+  _storeSuggestedSpace: function (seatDetailsObject) {
+    // gs.info("RC _storeSuggestedSpace " + JSON.stringify(seatDetailsObject));
+    // var parsedSeatDetails = JSON.parse(seatDetailsObject)
+    var shrt = seatDetailsObject;
+    var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
+    tracker.initialize();
+    tracker.u_location = shrt.sys_id + "";
+    tracker.u_user = gs.getUserID() + "";
+    tracker.u_status = "suggested";
+    tracker.insert();
+    return;
+  },
+
+  getMostBookedSeat: function (user) {
+    var ga = new GlideAggregate("sn_wsd_rsv_reservation");
+    ga.addQuery("requested_for", user);
+    ga.addAggregate("COUNT", "location");
+    ga.orderByAggregate("COUNT", "location");
+    ga.query();
+    var i = 0;
+    var space = "";
+    while (ga.next() && i++ < 1) {
+      space = ga.getValue("location").toString();
+    }
+    //gs.info("getMostBookedSeats==" + space);
+    return space;
+  },
+
+  getLastBookedSeat: function (user) {
+    var gr = new GlideRecord("sn_wsd_rsv_reservation");
+    gr.addEncodedQuery("requested_for=" + user); //Check any filters on state to be kept for finding last reserved space
+    gr.orderByDesc("sys_updated_on");
+    gr.query();
+    var space = "";
+    if (gr.next()) {
+      //gs.info("getLastBookedSeat==" + gr.getValue("location"));
+      space = gr.getValue("location").toString();
+    }
+    return space;
+  },
+
+  getFirstSpace: function (result) {
+    var reservableUnits = "";
+    var parser = new global.JSONParser();
+    var parsed = parser.parse(global.JSON.stringify(result));
+    reservableUnits = parsed.reservableUnits[0];
+    gs.info(
+      "RC Scripted Rest API getFirstSpace function Result reservableUnits === " +
+        reservableUnits
+    );
+    if (
+      reservableUnits != "" &&
+      reservableUnits != undefined &&
+      reservableUnits != null
+    )
+      return reservableUnits;
+    return "";
+  },
+
+  getTodayReservationDetails: function () {
+    try {
+      var resvDetails = "";
+      var reservationGr = new GlideRecord("sn_wsd_rsv_reservation");
+      reservationGr.addEncodedQuery(
+        "active=true^startONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()^requested_for=" +
+          gs.getUserID()
+      );
+      reservationGr.query();
+      if (reservationGr.next()) {
+        resvDetails = {
+          todaysreservation: {
+            sys_id: reservationGr.location.toString(),
+            external_id: reservationGr.location.external_id.toString(),
+            todays_status: reservationGr.state.toString(),
+          },
+        };
+      }
+      return global.JSON.stringify(resvDetails);
+    } catch (ex) {
+      gs.error("getTodayReservationDetailsCatch===" + ex);
     }
   },
 
@@ -139,7 +237,7 @@ WSDSuggestedModelService.prototype = {
       }
 
       var searchRequest = resolverResult.searchRequest;
-      gs.info("RC searchRequest " + JSON.stringify(searchRequest));
+      // gs.info("RC searchRequest " + JSON.stringify(searchRequest));
 
       if (moduleIsTypeShift) {
         var shiftValidatorOutcome = shiftValidator.validateShiftAndStartEnd(
@@ -195,72 +293,6 @@ WSDSuggestedModelService.prototype = {
           stack: ex.stack,
         }
       );
-    }
-  },
-
-  getMostBookedSeat: function (user) {
-    var ga = new GlideAggregate("sn_wsd_rsv_reservation");
-    ga.addQuery("requested_for", user);
-    ga.addAggregate("COUNT", "location");
-    ga.orderByAggregate("COUNT", "location");
-    ga.query();
-    var i = 0;
-    var space = "";
-    while (ga.next() && i++ < 1) {
-      space = ga.getValue("location").toString();
-    }
-    gs.info("getMostBookedSeats==" + space);
-    return space;
-  },
-
-  getLastBookedSeat: function (user) {
-    var gr = new GlideRecord("sn_wsd_rsv_reservation");
-    gr.addEncodedQuery("requested_for=" + user); //Check any filters on state to be kept for finding last reserved space
-    gr.orderByDesc("sys_updated_on");
-    gr.query();
-    var space = "";
-    if (gr.next()) {
-      gs.info("getLastBookedSeat==" + gr.getValue("location"));
-      space = gr.getValue("location").toString();
-    }
-    return space;
-  },
-
-  getFirstSpace: function (result) {
-    var reservableUnits = "";
-    var parser = new global.JSONParser();
-    var parsed = parser.parse(global.JSON.stringify(result));
-    reservableUnits = parsed.reservableUnits[0];
-    gs.info("Scripted Rest API Result reservableUnits === " + reservableUnits);
-    if (
-      reservableUnits != "" &&
-      reservableUnits != undefined &&
-      reservableUnits != null
-    )
-      return reservableUnits;
-  },
-
-  getTodayReservationDetails: function () {
-    try {
-      var resvDetails = "";
-      var reservationGr = new GlideRecord("sn_wsd_rsv_reservation");
-      reservationGr.addEncodedQuery(
-        "active=true^startONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()^requested_for=" +
-          gs.getUserID()
-      );
-      reservationGr.query();
-      if (reservationGr.next()) {
-        resvDetails = {
-          todaysreservation: {
-            sys_id: reservationGr.location.toString(),
-            external_id: reservationGr.location.external_id.toString(),
-            todays_status: reservationGr.state.toString(),
-          },
-        };
-      }
-      return global.JSON.stringify(resvDetails);
-    } catch (ex) {
-      gs.info("getTodayReservationDetailsCatch===" + ex);
     }
   },
 
