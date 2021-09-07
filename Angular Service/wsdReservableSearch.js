@@ -40,6 +40,15 @@ function wsdReservableSearch($http) {
     //console.log("RC one click research " + url);
     return $http.get(url).then(_resultParser);
   }
+  function getSuggestedSeat2(requestObj) {
+    // console.log("RC - calling api " + JSON.stringify(requestObj));
+    var url = _constructSearchReservablesQueryStr(
+      RESERVABLE_SEARCH_SUGGESTED_SEAT_URL,
+      requestObj
+    );
+    //console.log("RC one click research " + url);
+    return $http.get(url).then(_resultParser);
+  }
 
   /**
    * get reservable module using sys_id
@@ -63,10 +72,13 @@ function wsdReservableSearch($http) {
     //   "RC getAvailableReservables function , query json for one click " +
     //     JSON.stringify(requestObj)
     // );
+
     var url = _constructSearchReservablesQueryStr(
       RESERVABLE_SEARCH_BASE_URL,
       requestObj
     );
+    console.log("url");
+    console.log(url);
     //console.log("RC one click research " + url);
     return $http.get(url).then(_resultParser);
   }
@@ -126,11 +138,14 @@ function wsdReservableSearch($http) {
 
     if (requestObj.building) url += "&q=building=" + requestObj.building;
 
-    // RC - added custom query - testing
+    // RC - added custom query - start
     // one click feature - force to consider our query
     if (requestObj.q) url += "^" + requestObj.q;
-
+    //console.log("RC area is " + requestObj.wsd_area);
+    if (requestObj.wsd_area) url += "&wsd_area=" + requestObj.wsd_area;
+    // RC - end
     if (requestObj.floors) url += "^floorIN" + requestObj.floors;
+    if (requestObj.areas) url += "^areaIN" + requestObj.areas;
 
     if (requestObj.capacity) url += "^capacity>=" + requestObj.capacity;
 
@@ -160,6 +175,7 @@ function wsdReservableSearch($http) {
     checkReservablesAvailabilities: checkReservablesAvailabilities,
     checkExistingReservation: checkExistingReservation,
     getSuggestedSeat: getSuggestedSeat,
+    getSuggestedSeat2: getSuggestedSeat2,
   };
 
   /**

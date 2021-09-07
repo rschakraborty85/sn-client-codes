@@ -1,3 +1,19 @@
+.oc_rsv_status_pending {
+  float: right;
+  background-color: #f1cecd;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.oc_rsv_status_completed {
+  float: right;
+  background-color: #dff0d8;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
 .oc_rsv_button {
   margin-top: 10px;
   margin-left: 15px;

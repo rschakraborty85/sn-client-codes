@@ -17,6 +17,18 @@
       gs.getProperty("sn_wsd_rsv.one_click.search.object.template")
     );
     data.current_date_utc = _getCurrentDateTimeObjectUtc();
+    data.next_date_utc = _getNextDateTimeObjectUtc();
+  }
+
+  /**
+   *
+   */
+  function _getNextDateTimeObjectUtc() {
+    //
+    var tmpObj = {};
+    tmpObj.start = _getDateTimeUTC(24);
+    tmpObj.end = _getDateTimeUTC(32);
+    return tmpObj;
   }
 
   /**
@@ -65,7 +77,15 @@
         tmpObj.user_building_label =
           profile.workplace_location.building.getDisplayValue() + "";
         tmpObj.user_reserve_module = profile.u_reservable_module + "";
-        tmpObj.user_area_id = profile.workplace_location.sys_id + "";
+        tmpObj.user_floor_id = profile.workplace_location.floor.sys_id + "";
+        tmpObj.user_floor_label =
+          profile.workplace_location.floor.getDisplayValue() + "";
+        if (profile.workplace_location.sys_class_name == "sn_wsd_core_area")
+          tmpObj.user_area_id = profile.workplace_location.sys_id + "";
+        else if (
+          profile.workplace_location.sys_class_name == "sn_wsd_core_space"
+        )
+          tmpObj.user_area_id = profile.workplace_location.area.sys_id + "";
       } else {
         tmpObj.status = "invalid_profile";
         tmpObj.user_building_id = "";

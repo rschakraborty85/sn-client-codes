@@ -1,20 +1,45 @@
-<div ng-if="c.valid_profile">
+<div ng-if="c.valid_profile" class="panel-heading">
   <!-- your widget template -->
   <div>
     <span class="oc_header">${Steps to return to the workplace}</span>
   </div>
   <!-- <div>
-        <span class="oc_rsv_status">${Pending}</span>
-    </div> -->
+          <span class="oc_rsv_status">${Pending}</span>
+      </div> -->
   <div class="">
-    <ul class="fa-ul list oc_gap">
-      <li>
-        <i class="fa-li fa fa-square-o li-icon" />
-        ${*SUGGESTED WORKSPACE FOR TODAY}
-      </li>
-    </ul>
-    <span class="oc_rsv_status">${Pending}</span>
-    <div class="oc_seat">
+    <!-- class="fa-ul list oc_gap" -->
+    <span class="oc_gap">
+      <ul class="fa-ul list">
+        <li>
+          <i class="fa-li fa fa-square-o li-icon" />
+          ${*SUGGESTED WORKSPACE FOR TODAY}
+        </li>
+        <!-- class="oc_rsv_status" -->
+
+        <span
+          ng-class="(c.reservation_status ? 'oc_rsv_status_completed' : 'oc_rsv_status_pending')"
+          class="ng-binding oc_rsv_status_pending"
+          >{{c.reservation_status_text}}</span
+        >
+      </ul>
+    </span>
+    <!-- <ul class="fa-ul list oc_gap">
+        <li>
+          <i class="fa-li fa fa-square-o li-icon" />
+          ${*SUGGESTED WORKSPACE FOR TODAY}
+        </li>
+      </ul> -->
+
+    <!-- if no response ; show error msg -->
+    <div ng-if="c.result.error">
+      <div>
+        ${Building }{{c.result.seat_building_label}}${ - Floor
+        }{{c.result.seat_floor_label}}
+      </div>
+      <div>{{c.result.error_msg}}</div>
+    </div>
+    <!-- otherwise ; show suggested space -->
+    <div class="oc_seat" ng-if="!c.result.error">
       <div>
         ${Building }{{c.result.seat_building_label}}${ - Floor
         }{{c.result.seat_floor_label}}
@@ -22,26 +47,54 @@
       <div>${Space: }{{c.result.seat_space_label}}</div>
     </div>
     <div class="oc_rsv_button" ng-show="c.result.seat_space_label">
-      <a href="javascript:void(0)" ng-click="c.redirectToReservation()"
+      <a href="javascript:void(0)" ng-click="c.redirectToReservation('today')"
+        >Reserve</a
+      >
+    </div>
+
+    <span class="oc_gap">
+      <ul class="fa-ul list">
+        <li>
+          <i class="fa-li fa fa-square-o li-icon" />
+          ${*SUGGESTED WORKSPACE FOR TOMORROW}
+        </li>
+        <!-- class="oc_rsv_status" -->
+      </ul>
+    </span>
+    <!-- if no response ; show error msg -->
+    <div ng-if="c.result2.error">
+      <div>
+        ${Building }{{c.result2.seat_building_label}}${ - Floor
+        }{{c.result2.seat_floor_label}}
+      </div>
+      <div>{{c.result2.error_msg}}</div>
+    </div>
+    <div class="oc_seat" ng-if="!c.result2.error">
+      <div>
+        ${Building }{{c.result2.seat_building_label}}${ - Floor
+        }{{c.result2.seat_floor_label}}
+      </div>
+      <div>${Space: }{{c.result2.seat_space_label}}</div>
+    </div>
+    <div class="oc_rsv_button">
+      <a
+        href="javascript:void(0)"
+        ng-click="c.redirectToReservation('tomorrow')"
         >Reserve</a
       >
     </div>
     <br />
-    <ul class="fa-ul list oc_gap">
-      <li>
-        <i class="fa-li fa fa-square-o li-icon" />
-        ${*SUGGESTED WORKSPACE FOR TOMORROW}
-      </li>
-    </ul>
-    <div class="oc_seat">
-      <div>${Building 1 - Floor 5}</div>
-      <div>${Space: A1.101}</div>
-    </div>
-    <div class="oc_rsv_button"><a href="javascript:void(0)">Reserve</a></div>
     <div class="oc_rsv_button">
-      <a href="javascript:void(0)">Custom reservation</a>
+      <a href="javascript:void(0)" ng-href="/ws?id=wsd_search" target="_blank"
+        >Custom reservation</a
+      >
       <span style="padding-left: 10px; padding-right: 10px">${|}</span>
-      <a href="javascript:void(0)">View reservation</a>
+      <a
+        href="javascript:void(0)"
+        ng-href="/ws?id=wsd_reservations"
+        target="_blank"
+        >View reservation</a
+      >
     </div>
   </div>
 </div>

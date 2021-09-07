@@ -1,26 +1,26 @@
 {
-  "sys_id": "35143362db6a9450ee0a43c8139619d6",
-  "external_id": "A7.0162",
+  "sys_id": "a2b9f726dbaa9450ee0a43c8139619ae",
+  "external_id": "320",
   "email": null,
-  "name": "A7.0162",
+  "name": "320",
   "description": null,
   "image": null,
-  "number": "SPCE0003010",
+  "number": "SPCE0015075",
   "campus": {
-    "sys_id": "f90b2baedb2614500adbc4be1396196c",
-    "display_value": "Hyderabad, Knowledge City"
+    "sys_id": "9e0b2baedb2614500adbc4be139619dc",
+    "display_value": "Newport Beach, Regus"
   },
   "building": {
-    "sys_id": "a13bafaedb2614500adbc4be13961988",
+    "sys_id": "463befaedb2614500adbc4be1396191e",
     "display_value": "A"
   },
   "floor": {
-    "sys_id": "be5b27eedb2614500adbc4be13961943",
-    "display_value": "7"
+    "sys_id": "235b67eedb2614500adbc4be13961908",
+    "display_value": "3"
   },
   "area": {
-    "sys_id": "2aebe9b1db92385058e325091396191f",
-    "display_value": "Finance"
+    "sys_id": "2d1c2135db92385058e32509139619f2",
+    "display_value": "Sales"
   },
   "capacity": null,
   "reservable_quantity": "1",
@@ -38,25 +38,34 @@
   "is_available": true,
   "reservations": [],
   "container": {
-    "sys_id": "2aebe9b1db92385058e325091396191f",
-    "display_value": "Finance",
+    "sys_id": "2d1c2135db92385058e32509139619f2",
+    "display_value": "Sales",
     "floor": {
-      "sys_id": "be5b27eedb2614500adbc4be13961943",
-      "display_value": "7",
-      "name": "7"
+      "sys_id": "235b67eedb2614500adbc4be13961908",
+      "display_value": "3",
+      "name": "3"
     },
+    "area": null,
     "building": {
-      "sys_id": "a13bafaedb2614500adbc4be13961988",
+      "sys_id": "463befaedb2614500adbc4be1396191e",
       "display_value": "A",
       "name": "A"
     },
     "campus": {
-      "sys_id": "f90b2baedb2614500adbc4be1396196c",
-      "display_value": "Hyderabad, Knowledge City",
-      "name": "Hyderabad, Knowledge City"
+      "sys_id": "9e0b2baedb2614500adbc4be139619dc",
+      "display_value": "Newport Beach, Regus",
+      "name": "Newport Beach, Regus"
     },
     "capacity": 0,
     "image": null
   },
-  "includedInResult": true
+  "includedInResult": true,
+  "oc_reservation_status": {
+    "exist": true,
+    "state": "confirmed",
+    "location": "eab9f726dbaa9450ee0a43c8139619b4",
+    "state_label": "Confirmed",
+    "location_label": "319",
+    "rsv_id": "abbcebaadb92b49058e32509139619fc"
+  }
 }

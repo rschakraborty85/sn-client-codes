@@ -1,23 +1,41 @@
 api.controller = function (wsdUtils, wsdReservableSearch, $window) {
   /* widget controller */
   var c = this;
-  var searchObj = {};
+  var searchObj = {}; //today
+  var searchObj2 = {}; //tomorrow
   c.result = {};
+  c.reservation_status = false;
+  c.reservation_status_text = "Pending";
   //
   _init();
-
-  c.redirectToReservation = function () {
+  /**
+   * redirect to oob page with required param
+   */
+  c.redirectToReservation = function (flag) {
     //
-    console.log("RC c.result.seat_space_sys_id " + c.result.seat_space_sys_id);
-    $window.location.href =
-      "/ws?id=wsd_reservation&reservable_ids=" +
-      c.result.seat_space_sys_id +
-      "&start=" +
-      searchObj.start +
-      "&end=" +
-      searchObj.end +
-      "&reservable_module=" +
-      searchObj.reservable_module;
+    console.log("RC link to reservation " + flag);
+
+    if (flag == "today") {
+      $window.location.href =
+        "/ws?id=wsd_reservation&reservable_ids=" +
+        c.result.seat_space_sys_id +
+        "&start=" +
+        searchObj.start +
+        "&end=" +
+        searchObj.end +
+        "&reservable_module=" +
+        searchObj.reservable_module;
+    } else if (flag == "tomorrow") {
+      $window.location.href =
+        "/ws?id=wsd_reservation&reservable_ids=" +
+        c.result2.seat_space_sys_id +
+        "&start=" +
+        searchObj2.start +
+        "&end=" +
+        searchObj2.end +
+        "&reservable_module=" +
+        searchObj.reservable_module;
+    }
   };
   /**
    *
@@ -40,22 +58,52 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
    */
   function _getSuggestedSeat(resp) {
     //
-    var test = _callSuggestedSeatAPI(_buildSearchObject(resp));
-    console.log("RC after parse " + JSON.stringify(test));
+    _callSuggestedSeatAPI(_buildSearchObject(resp));
+    //console.log("RC after parse " + JSON.stringify(test));
   }
 
   /**
    *
-   * @param {*} searchObj
+   * @param {*} searchRequest
    */
-  function _callSuggestedSeatAPI(searchObj) {
+  function _callSuggestedSeatAPI(searchRequest) {
     //
-    //console.log("RC - before calling api " + JSON.stringify(searchObj));
-    wsdReservableSearch.getSuggestedSeat(searchObj).then(function (response) {
-      //console.log("RC lets see what we get " + JSON.stringify(response));
-      c.result = _parseResponse(response);
-      return c.result;
-    });
+    //console.log("RC - before calling api " + JSON.stringify(searchRequest));
+    wsdReservableSearch
+      .getSuggestedSeat(searchRequest)
+      .then(function (response) {
+        console.log("RC lets see what we get1 " + JSON.stringify(response));
+        // var tmpResponse = JSON.parse(response);
+        var respToday = response.today;
+        var respTomorrow = response.tomorrow;
+        // console.log("RC lets see what we get1 " + JSON.stringify(respToday));
+
+        // this is for today
+        c.result = _parseResponse(respToday);
+        if (c.result.error) {
+          c.result = _callErrorHandler(respToday);
+        }
+        // this is for tomorrow
+        c.result2 = _parseResponse(respTomorrow);
+        if (c.result2.error) {
+          c.result2 = _callErrorHandler(respTomorrow);
+        }
+        // return c.result;
+        //return c.result;
+        return;
+      });
+  }
+
+  function _callErrorHandler(response) {
+    //
+    var result = {};
+    result.error = true;
+    result.error_msg = response.error_msg;
+    result.seat_building_label = searchObj.wsd_building_label + "";
+    result.seat_floor_label = searchObj.wsd_floor_label + "";
+    result.seat_space_label = "";
+    result.seat_space_sys_id = "";
+    return result;
   }
 
   /**
@@ -63,31 +111,50 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
    * @param {*} response
    */
   function _parseResponse(response) {
-    //
+    // console.log(
+    //   "RC - parse response " + JSON.stringify(response)
+    //   // +
+    //   // " " +
+    //   //typeof response.error
+    // );
+    if (response.error) {
+      return response;
+    }
     var tmpObj = response; //JSON.parse(response);
     var result = {};
     result.seat_building_label = tmpObj.building.display_value + "";
     result.seat_floor_label = tmpObj.floor.display_value + "";
     result.seat_space_label = tmpObj.name + "";
     result.seat_space_sys_id = tmpObj.sys_id + "";
+    c.reservation_status = tmpObj.oc_reservation_status.exist;
+    c.reservation_status_text = c.reservation_status ? "Completed" : "Pending";
     return result;
   }
 
   /**
-   * @param {*} resp
+   * @param {Promise} resp
    */
   function _buildSearchObject(resp) {
     //
-    // console.log(JSON.stringify(resp));
+    //console.log("RC building search object " + JSON.stringify(resp));
     searchObj = resp.search_object_template;
     searchObj.start = resp.current_date_utc.start;
     searchObj.end = resp.current_date_utc.end;
     searchObj.building = resp.building_module_details.user_building_id;
     searchObj.reservable_module =
       resp.building_module_details.user_reserve_module;
+    searchObj.wsd_floor_label = resp.building_module_details.user_floor_label;
+    searchObj.wsd_building_label =
+      resp.building_module_details.user_building_label;
     searchObj.q = "active=true^active=true^sys_class_name=sn_wsd_core_space";
     //searchObj.q += "^building=" + searchObj.building;
     searchObj.q += "^area=" + resp.building_module_details.user_area_id;
+    // custom search
+    searchObj.wsd_area = resp.building_module_details.user_area_id;
+    searchObj.wsd_start_tomorrow = resp.next_date_utc.start;
+    searchObj2.start = searchObj.wsd_start_tomorrow;
+    searchObj.wsd_end_tomorrow = resp.next_date_utc.end;
+    searchObj2.end = searchObj.wsd_end_tomorrow;
     return searchObj;
   }
 

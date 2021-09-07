@@ -1,139 +1,207 @@
 var WSDSuggestedModelService = Class.create();
 WSDSuggestedModelService.prototype = {
-  initialize: function () {},
-
-  getSeatDetails: function (request, response, building) {
+  initialize: function () {
+    this.error_msg = gs.getMessage("one_click_error_msg");
+    this.api_response = {};
+  },
+  /**
+   * function to provide suggested seat for today and tomorrow
+   * @param {HttpRequest} request
+   * @param {HttpResponse} response
+   * @returns {Object} @type {CustomJSON}
+   */
+  getSeatDetails: function (request, response) {
     try {
-      var mostBookedSeat = this.getMostBookedSeat(gs.getUserID()) + "";
-      var lastBookedSeat = this.getLastBookedSeat(gs.getUserID()) + "";
-      var getUsedSeats = this._getAlreadySuggestedSeat() + "";
+      var mostBookedSeat = this.getMostBookedSeat(gs.getUserID());
+      var lastBookedSeat = this.getLastBookedSeat(gs.getUserID());
+      //gs.info("RC request package " + JSON.stringify(request.queryParams));
+
+      /**
+       * prepare the date time params
+       * parse the dates from query string
+       * both for today and tomorrow
+       */
+      var searchString = "";
       var searchStringDefault = String(request.queryParams.q);
-      var favSeats = [];
-      favSeats.push(mostBookedSeat);
-      favSeats.push(lastBookedSeat);
-      if (favSeats.length != 0)
-        searchString = searchStringDefault + "^sys_idIN" + favSeats;
+      var startToday = String(request.queryParams.start);
+      var endToday = String(request.queryParams.end);
+      var startTomorrow = String(request.queryParams.wsd_start_tomorrow);
+      var endTomorrow = String(request.queryParams.wsd_end_tomorrow);
+      //gs.info("RC all dates " + startTomorrow + " " + endTomorrow);
+
+      var favSeats = "";
+      if (mostBookedSeat) favSeats += mostBookedSeat;
+      if (lastBookedSeat && mostBookedSeat != lastBookedSeat)
+        favSeats += "," + lastBookedSeat;
+      // // only push if its unique
+      // if (lastBookedSeat) {
+      //   if (favSeats.indexOf(lastBookedSeat) < 0) favSeats.push(lastBookedSeat);
+      // }
+      gs.info("RC most or last seat " + favSeats.toString());
+      // check if fav seats are available
+      if (favSeats) searchString = searchStringDefault + "^sys_idIN" + favSeats;
       // building query needs to be added
       else searchString = searchStringDefault;
-      //     "building=7d3bafaedb2614500adbc4be139619b0^active=true^sys_class_name=sn_wsd_core_space"; // this can never be null // UI will add building query as default
-      // gs.info("callReservableAPI == searchString" + searchString);
 
-      var result = this.callReservableAPI(request, response, searchString);
-      // gs.info("RC is it working " + JSON.stringify(result));
+      // make oob api call for todays reservation
+      // this.api_response.push(
+      // JSON.stringify(
+      this.api_response.today = this._makeCallForToday(
+        request,
+        response,
+        searchString,
+        startToday,
+        endToday
+      );
+      // )
+      // );
+      // make same call for tomorrow
+      // this.api_response.push(
+      // JSON.stringify(
+      this.api_response.tomorrow = this._makeCallForTomorrow(
+        request,
+        response,
+        searchString,
+        startTomorrow,
+        endTomorrow
+      );
+      // )
+      // );
+      // return JSON.stringify(this.api_response);
+      return this.api_response;
+    } catch (error) {
+      gs.error("ERROR in getSeatDetails function " + error);
+    }
+  },
+  /**
+   * make oob api call to get todays reservation
+   * @param {HttpRequest} request
+   * @param {HttpResponse} response
+   * @param {String} searchString @type {encodedQuery}
+   * @param {String} start @type {date time}
+   * @param end
+   * @returns
+   */
+  _makeCallForToday: function (request, response, searchString, start, end) {
+    try {
+      var when = "today";
+
+      var alreadySuggestedAreaSeats =
+        this._getAlreadySuggestedAreaSeat(
+          String(request.queryParams.wsd_area, when)
+        ) + "";
+      if (alreadySuggestedAreaSeats) {
+        searchString += alreadySuggestedAreaSeats + "";
+      }
+
+      var result = this.callReservableAPI(
+        request,
+        response,
+        searchString,
+        start,
+        end
+      );
+      gs.info(
+        "RC is it working TODAY ; trying to find fav seat" +
+          JSON.stringify(result)
+      );
       var favSeatDetails = this.getFirstSpace(result);
       if (
         favSeatDetails != null &&
         favSeatDetails != undefined &&
         favSeatDetails != ""
       ) {
-        this._storeSuggestedSpace(favSeatDetails);
+        //gs.info("RC fav seat response " + JSON.stringify(favSeatDetails));
+        this._storeSuggestedSpace(favSeatDetails, when);
+        this._ifUserReservedForToday(favSeatDetails);
         return favSeatDetails;
       } else {
         var tmpStore = this.getFirstSpace(
-          this.callReservableAPI(request, response, searchStringDefault)
+          this.callReservableAPI(request, response, searchString, start, end)
         );
-        this._storeSuggestedSpace(tmpStore);
-        return tmpStore;
+        // gs.info("RC NON fav seat response " + JSON.stringify(tmpStore));
+        if (tmpStore) {
+          this._ifUserReservedForToday(tmpStore);
+          this._storeSuggestedSpace(tmpStore, when);
+          return tmpStore;
+        }
+        // error handling - common message
+        return {
+          error: true,
+          error_msg: this.error_msg,
+        };
       }
-    } catch (ex) {
-      gs.error("getSeatDetails Exception==" + ex);
+    } catch (error) {
+      gs.error("ERROR in _makeCallForToday function " + error);
     }
   },
-
-  _getAlreadySuggestedSeat: function () {
-    //u_location.ref_sn_wsd_core_area.building.sys_id=
-    var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
-    tracker.addQuery("u_location.ref_sn_wsd_core_area.building.sys_id",)
+  /**
+   * make oob api call to get tomorrows reservation
+   * @param {HttpRequest} request
+   * @param {HttpRequest} response
+   * @param {String} searchString @type {encodedQuery}
+   * @param {String} start @type {date time}
+   * @param {String} end @type {date time}
+   * @returns
+   */
+  _makeCallForTomorrow: function (request, response, searchString, start, end) {
+    try {
+      var when = "tomorrow";
+      var alreadySuggestedAreaSeats =
+        this._getAlreadySuggestedAreaSeat(
+          String(request.queryParams.wsd_area, when)
+        ) + "";
+      if (alreadySuggestedAreaSeats) {
+        searchString += alreadySuggestedAreaSeats + "";
+      }
+      var result = this.callReservableAPI(
+        request,
+        response,
+        searchString,
+        start,
+        end
+      );
+      //gs.info("RC is it working TOMORROW " + JSON.stringify(result));
+      var favSeatDetails = this.getFirstSpace(result);
+      if (
+        favSeatDetails != null &&
+        favSeatDetails != undefined &&
+        favSeatDetails != ""
+      ) {
+        //gs.info("RC fav seat response " + JSON.stringify(favSeatDetails));
+        this._storeSuggestedSpace(favSeatDetails, when);
+        this._ifUserReservedForToday(favSeatDetails);
+        return favSeatDetails;
+      } else {
+        var tmpStore = this.getFirstSpace(
+          this.callReservableAPI(request, response, searchString, start, end)
+        );
+        //gs.info("RC NON fav seat response " + JSON.stringify(tmpStore));
+        if (tmpStore) {
+          this._ifUserReservedForToday(tmpStore);
+          this._storeSuggestedSpace(tmpStore, when);
+          return tmpStore;
+        }
+        // error handling - common message
+        return {
+          error: true,
+          error_msg: this.error_msg,
+        };
+      }
+    } catch (error) {
+      gs.error("ERROR in _makeCallForToday " + error);
+    }
   },
   /**
    *
-   * @param {Object} seatDetailsObject
-   * @returns {void}
+   * @param {HttpRequest} request
+   * @param {HttpRequest} response
+   * @param {String} searchString
+   * @param {String} start @type {date time}
+   * @param {String} end @type {date time}
+   * @returns
    */
-  _storeSuggestedSpace: function (seatDetailsObject) {
-    // gs.info("RC _storeSuggestedSpace " + JSON.stringify(seatDetailsObject));
-    // var parsedSeatDetails = JSON.parse(seatDetailsObject)
-    var shrt = seatDetailsObject;
-    var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
-    tracker.initialize();
-    tracker.u_location = shrt.sys_id + "";
-    tracker.u_user = gs.getUserID() + "";
-    tracker.u_status = "suggested";
-    tracker.insert();
-    return;
-  },
-
-  getMostBookedSeat: function (user) {
-    var ga = new GlideAggregate("sn_wsd_rsv_reservation");
-    ga.addQuery("requested_for", user);
-    ga.addAggregate("COUNT", "location");
-    ga.orderByAggregate("COUNT", "location");
-    ga.query();
-    var i = 0;
-    var space = "";
-    while (ga.next() && i++ < 1) {
-      space = ga.getValue("location").toString();
-    }
-    //gs.info("getMostBookedSeats==" + space);
-    return space;
-  },
-
-  getLastBookedSeat: function (user) {
-    var gr = new GlideRecord("sn_wsd_rsv_reservation");
-    gr.addEncodedQuery("requested_for=" + user); //Check any filters on state to be kept for finding last reserved space
-    gr.orderByDesc("sys_updated_on");
-    gr.query();
-    var space = "";
-    if (gr.next()) {
-      //gs.info("getLastBookedSeat==" + gr.getValue("location"));
-      space = gr.getValue("location").toString();
-    }
-    return space;
-  },
-
-  getFirstSpace: function (result) {
-    var reservableUnits = "";
-    var parser = new global.JSONParser();
-    var parsed = parser.parse(global.JSON.stringify(result));
-    reservableUnits = parsed.reservableUnits[0];
-    gs.info(
-      "RC Scripted Rest API getFirstSpace function Result reservableUnits === " +
-        reservableUnits
-    );
-    if (
-      reservableUnits != "" &&
-      reservableUnits != undefined &&
-      reservableUnits != null
-    )
-      return reservableUnits;
-    return "";
-  },
-
-  getTodayReservationDetails: function () {
-    try {
-      var resvDetails = "";
-      var reservationGr = new GlideRecord("sn_wsd_rsv_reservation");
-      reservationGr.addEncodedQuery(
-        "active=true^startONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()^requested_for=" +
-          gs.getUserID()
-      );
-      reservationGr.query();
-      if (reservationGr.next()) {
-        resvDetails = {
-          todaysreservation: {
-            sys_id: reservationGr.location.toString(),
-            external_id: reservationGr.location.external_id.toString(),
-            todays_status: reservationGr.state.toString(),
-          },
-        };
-      }
-      return global.JSON.stringify(resvDetails);
-    } catch (ex) {
-      gs.error("getTodayReservationDetailsCatch===" + ex);
-    }
-  },
-
-  callReservableAPI: function (request, response, searchString) {
+  callReservableAPI: function (request, response, searchString, start, end) {
     var RESOURCE_PATH = "/api/sn_wsd_rsv/search/suggested_seat";
     var apiHelper = new WSDApiHelper();
     var searchService = new WSDSearchService();
@@ -141,12 +209,12 @@ WSDSuggestedModelService.prototype = {
     var restValidator = new WSDRestRequestValidator();
     var shiftValidator = new WSDShiftValidator();
     var shiftService = new WSDShiftService();
-
+    // //gs.info("RC start and end is " + start + " and " + end + "");
     // searchCriteria is expected to be encodedQuery
     var requestObj = {
       searchCriteria: searchString,
-      start: String(request.queryParams.start),
-      end: String(request.queryParams.end),
+      start: start,
+      end: end,
       shift: String(request.queryParams.shift),
       reservable_module: String(request.queryParams.reservable_module),
       reservation_ids: String(request.queryParams.reservation_ids),
@@ -237,7 +305,7 @@ WSDSuggestedModelService.prototype = {
       }
 
       var searchRequest = resolverResult.searchRequest;
-      // gs.info("RC searchRequest " + JSON.stringify(searchRequest));
+      //gs.info("RC searchRequest " + JSON.stringify(searchRequest));
 
       if (moduleIsTypeShift) {
         var shiftValidatorOutcome = shiftValidator.validateShiftAndStartEnd(
@@ -294,6 +362,195 @@ WSDSuggestedModelService.prototype = {
         }
       );
     }
+  },
+
+  /**
+   *
+   * @param {GlideRecord / Workplace reservation} current
+   */
+  updateSuggestedSeatTracker: function (current) {
+    //
+    try {
+      var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
+      tracker.addQuery("u_user", current.requested_for.sys_id + "");
+      tracker.addEncodedQuery(
+        "sys_created_onONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
+      );
+      tracker.query();
+      if (tracker.next()) {
+        tracker.u_status = "booked";
+        tracker.update();
+      } else {
+        tracker.initialize();
+        tracker.u_location = current.location.sys_id + "";
+        tracker.u_user = current.requested_for.sys_id + "";
+        tracker.u_area = current.location.area.sys_id + "";
+        tracker.u_status = "booked";
+        tracker.insert();
+      }
+    } catch (error) {
+      gs.error("Error in updateSuggestedSeatTracker function " + error);
+    }
+  },
+  /**
+   *
+   * @param {Object} seatDetailsObject
+   */
+  _ifUserReservedForToday: function (seatDetailsObject) {
+    //
+    try {
+      var reserveGR = new GlideRecord("sn_wsd_rsv_reservation");
+      reserveGR.addEncodedQuery(
+        "sys_created_onONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
+      );
+      reserveGR.query("requested_for", gs.getUserID());
+      reserveGR.query();
+      seatDetailsObject.oc_reservation_status = {};
+      seatDetailsObject.oc_reservation_status.exist = false;
+      if (reserveGR.next()) {
+        seatDetailsObject.oc_reservation_status.exist = true;
+        seatDetailsObject.oc_reservation_status.state = reserveGR.state + "";
+        seatDetailsObject.oc_reservation_status.location =
+          reserveGR.location + "";
+        seatDetailsObject.oc_reservation_status.state_label =
+          reserveGR.state.getDisplayValue();
+        seatDetailsObject.oc_reservation_status.location_label =
+          reserveGR.location.getDisplayValue();
+        seatDetailsObject.oc_reservation_status.rsv_id = reserveGR.sys_id + "";
+      }
+    } catch (error) {
+      gs.error("Error in _ifUserReservedForToday function " + error);
+    }
+  },
+  /**
+   *
+   * @param area_id
+   * @param when
+   * @returns
+   */
+  _getAlreadySuggestedAreaSeat: function (area_id, when) {
+    try {
+    } catch (error) {}
+    //u_location.ref_sn_wsd_core_area.building.sys_id=
+    //gs.info("RC - find used seat " + area_id);
+    var ids = "";
+    var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
+    // when is the last suggestion been made
+    // either today or tomorrow
+    if (when == "today")
+      tracker.addEncodedQuery(
+        "u_last_suggestion_timeONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
+      );
+    else if (when == "tomorrow")
+      tracker.addEncodedQuery(
+        "u_last_suggestion_timeONTomorrow@javascript:gs.beginningOfTomorrow()@javascript:gs.endOfTomorrow()"
+      );
+    tracker.addQuery("u_area.sys_id", area_id);
+    tracker.addQuery("u_status", "suggested");
+    tracker.query();
+    //gs.info("RC used seat " + tracker.getRowCount());
+    while (tracker.next()) {
+      //ids.push("^sys_id!=" + tracker.u_location.sys_id + "");
+      ids += "^sys_id!=" + tracker.u_location.sys_id;
+    }
+    if (ids.length > 0) return ids.toString();
+    return "";
+  },
+  /**
+   *
+   * @param {Object} seatDetailsObject
+   * @typedef seatDetailsObject Custom JSON
+   * @returns {void}
+   */
+  _storeSuggestedSpace: function (seatDetailsObject, when) {
+    //gs.info("RC _storeSuggestedSpace " + JSON.stringify(seatDetailsObject));
+    // var parsedSeatDetails = JSON.parse(seatDetailsObject)
+    var shrt = seatDetailsObject;
+    var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
+    if (when == "today")
+      tracker.addEncodedQuery(
+        "u_last_suggestion_timeONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
+      );
+    else if (when == "tomorrow")
+      tracker.addEncodedQuery(
+        "u_last_suggestion_timeONTomorrow@javascript:gs.beginningOfTomorrow()@javascript:gs.endOfTomorrow()"
+      );
+    tracker.addQuery("u_area.sys_id", shrt.area.sys_id + "");
+    tracker.addQuery("u_user", gs.getUserID() + "");
+    tracker.addQuery("u_status", "!=", "booked");
+    tracker.query();
+    if (tracker.next()) {
+      tracker.u_location = shrt.sys_id + "";
+      tracker.u_area = shrt.area.sys_id + "";
+      tracker.u_suggestion_count += 1;
+      tracker.u_last_suggestion_time = this._getDateTimeUTC();
+      tracker.update();
+    } else {
+      tracker.initialize();
+      tracker.u_location = shrt.sys_id + "";
+      tracker.u_user = gs.getUserID() + "";
+      tracker.u_area = shrt.area.sys_id + "";
+      tracker.u_status = "suggested";
+      tracker.u_suggestion_count = 1;
+      tracker.u_last_suggestion_time = this._getDateTimeUTC();
+      tracker.insert();
+    }
+
+    return;
+  },
+  /**
+   *
+   * @returns {String} return current date time in UTC
+   */
+  _getDateTimeUTC: function () {
+    return new GlideDateTime().getValue();
+  },
+  getMostBookedSeat: function (user) {
+    var ga = new GlideAggregate("sn_wsd_rsv_reservation");
+    ga.addQuery("requested_for", user);
+    ga.addAggregate("COUNT", "location");
+    ga.orderByAggregate("COUNT", "location");
+    ga.query();
+    var i = 0;
+    var space = "";
+    while (ga.next() && i++ < 1) {
+      space = ga.getValue("location").toString();
+      return space;
+    }
+    //gs.info("getMostBookedSeats==" + space);
+    return null;
+  },
+
+  getLastBookedSeat: function (user) {
+    var gr = new GlideRecord("sn_wsd_rsv_reservation");
+    gr.addEncodedQuery("requested_for=" + user); //Check any filters on state to be kept for finding last reserved space
+    gr.orderByDesc("sys_updated_on");
+    gr.query();
+    var space = "";
+    if (gr.next()) {
+      //gs.info("getLastBookedSeat==" + gr.getValue("location"));
+      space = gr.getValue("location").toString();
+      return space;
+    }
+    return null;
+  },
+
+  getFirstSpace: function (result) {
+    var reservableUnits = "";
+    var parser = new global.JSONParser();
+    var parsed = parser.parse(global.JSON.stringify(result));
+    reservableUnits = parsed.reservableUnits[0];
+    // //gs.info(
+    //   "RC Scripted Rest API getFirstSpace function Result reservableUnits === " +
+    //     reservableUnits
+    // );
+    if (
+      reservableUnits != "" &&
+      reservableUnits != undefined &&
+      reservableUnits != null
+    )
+      return reservableUnits;
+    return "";
   },
 
   type: "WSDSuggestedModelService",
