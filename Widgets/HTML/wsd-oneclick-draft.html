@@ -1,7 +1,7 @@
 <div ng-if="c.valid_profile" class="panel-heading">
   <!-- your widget template -->
   <div>
-    <span class="oc_header">${Steps to return to the workplace}</span>
+    <span class="oc_header">{{c.widget_header}}</span>
   </div>
   <!-- <div>
           <span class="oc_rsv_status">${Pending}</span>
@@ -36,7 +36,7 @@
         ${Building }{{c.result.seat_building_label}}${ - Floor
         }{{c.result.seat_floor_label}}
       </div>
-      <div>{{c.result.error_msg}}</div>
+      <div class="oc_error_msg">{{c.result.error_msg}}</div>
     </div>
     <!-- otherwise ; show suggested space -->
     <div class="oc_seat" ng-if="!c.result.error">
@@ -67,7 +67,7 @@
         ${Building }{{c.result2.seat_building_label}}${ - Floor
         }{{c.result2.seat_floor_label}}
       </div>
-      <div>{{c.result2.error_msg}}</div>
+      <div class="oc_error_msg">{{c.result2.error_msg}}</div>
     </div>
     <div class="oc_seat" ng-if="!c.result2.error">
       <div>
@@ -76,13 +76,14 @@
       </div>
       <div>${Space: }{{c.result2.seat_space_label}}</div>
     </div>
-    <div class="oc_rsv_button">
+    <div class="oc_rsv_button" ng-show="c.result.seat_space_label">
       <a
         href="javascript:void(0)"
         ng-click="c.redirectToReservation('tomorrow')"
         >Reserve</a
       >
     </div>
+
     <br />
     <div class="oc_rsv_button">
       <a href="javascript:void(0)" ng-href="/ws?id=wsd_search" target="_blank"

@@ -37,7 +37,7 @@ function wsdReservableSearch($http) {
       RESERVABLE_SEARCH_SUGGESTED_SEAT_URL,
       requestObj
     );
-    //console.log("RC one click research " + url);
+    console.log("RC one click research " + url);
     return $http.get(url).then(_resultParser);
   }
   function getSuggestedSeat2(requestObj) {
@@ -77,8 +77,7 @@ function wsdReservableSearch($http) {
       RESERVABLE_SEARCH_BASE_URL,
       requestObj
     );
-    console.log("url");
-    console.log(url);
+
     //console.log("RC one click research " + url);
     return $http.get(url).then(_resultParser);
   }
@@ -143,6 +142,9 @@ function wsdReservableSearch($http) {
     if (requestObj.q) url += "^" + requestObj.q;
     //console.log("RC area is " + requestObj.wsd_area);
     if (requestObj.wsd_area) url += "&wsd_area=" + requestObj.wsd_area;
+    if (requestObj.wsd_building_phase)
+      url += "&wsd_building_phase=" + requestObj.wsd_building_phase;
+
     // RC - end
     if (requestObj.floors) url += "^floorIN" + requestObj.floors;
     if (requestObj.areas) url += "^areaIN" + requestObj.areas;

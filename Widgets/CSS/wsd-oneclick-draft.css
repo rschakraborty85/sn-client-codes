@@ -1,3 +1,9 @@
+.oc_error_msg {
+  padding-left: 17px;
+  color: #f27727;
+  font-weight: 300;
+  line-height: 22px;
+}
 .oc_rsv_status_pending {
   float: right;
   background-color: #f1cecd;
@@ -54,7 +60,7 @@
 
   /* Heading 5 */
 
-  font-family: Source Sans Pro;
+  font-family: inherit;
   font-style: normal;
   font-weight: 600;
   font-size: 16px;

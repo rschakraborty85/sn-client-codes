@@ -6,6 +6,10 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
   c.result = {};
   c.reservation_status = false;
   c.reservation_status_text = "Pending";
+  c.widget_label_phase3 = "Steps to return to the workplace";
+  c.widget_label_phase4 = "My Reservations";
+  c.widget_label_phase = ["phase_1", "phase_2", "phase_3"];
+  c.widget_header = c.widget_label_phase4;
   //
   _init();
   /**
@@ -48,6 +52,10 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
           ? true
           : false;
       if (c.valid_profile) {
+        var phase = response.data.building_module_details.building_phase + "";
+        // console.log("RC phase is " + phase);
+        if (c.widget_label_phase.indexOf(phase) > -1)
+          c.widget_header = c.widget_label_phase3;
         _getSuggestedSeat(response.data);
       }
     });
@@ -107,7 +115,7 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
   }
 
   /**
-   *
+   * to parse rest api call response
    * @param {*} response
    */
   function _parseResponse(response) {
@@ -136,7 +144,7 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
    */
   function _buildSearchObject(resp) {
     //
-    //console.log("RC building search object " + JSON.stringify(resp));
+    // console.log("RC building search object " + JSON.stringify(resp));
     searchObj = resp.search_object_template;
     searchObj.start = resp.current_date_utc.start;
     searchObj.end = resp.current_date_utc.end;
@@ -152,8 +160,13 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
     // custom search
     searchObj.wsd_area = resp.building_module_details.user_area_id;
     searchObj.wsd_start_tomorrow = resp.next_date_utc.start;
-    searchObj2.start = searchObj.wsd_start_tomorrow;
     searchObj.wsd_end_tomorrow = resp.next_date_utc.end;
+    // not required right now
+    searchObj.wsd_building_phase =
+      resp.building_module_details.building_phase + "";
+    // keep a copy of the below data , mostly for reserve
+    // button for tomorrow
+    searchObj2.start = searchObj.wsd_start_tomorrow;
     searchObj2.end = searchObj.wsd_end_tomorrow;
     return searchObj;
   }
