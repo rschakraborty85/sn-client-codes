@@ -1,8 +1,26 @@
 var WSDSuggestedModelService = Class.create();
 WSDSuggestedModelService.prototype = {
   initialize: function () {
-    this.error_msg = gs.getMessage("one_click_error_msg");
-    this.api_response = {};
+    try {
+      this.error_msg = gs.getMessage("one_click_error_msg");
+      this.api_response = {};
+      this.defaultQueryString = "";
+      this.mostBooked = false;
+      this.lastBooked = false;
+      this.defaultSuggestionType = "random";
+      this.msg = "<WSDSuggestedModelService Logger>";
+      this.nl = "\n";
+      this.addLog = function (msg) {
+        this.msg += this.nl;
+        this.msg += msg;
+        this.msg += this.nl;
+      };
+      this.printLog = function () {
+        gs.warn("Printing Logs So far " + this.msg);
+      };
+    } catch (error) {
+      gs.error("Error in initialize function " + error);
+    }
   },
   /**
    * function to provide suggested seat for today and tomorrow
@@ -14,7 +32,6 @@ WSDSuggestedModelService.prototype = {
     try {
       var mostBookedSeat = this.getMostBookedSeat(gs.getUserID());
       var lastBookedSeat = this.getLastBookedSeat(gs.getUserID());
-      //gs.info("RC request package " + JSON.stringify(request.queryParams));
 
       /**
        * prepare the date time params
@@ -23,21 +40,18 @@ WSDSuggestedModelService.prototype = {
        */
       var searchString = "";
       var searchStringDefault = String(request.queryParams.q);
+      this.defaultQueryString = searchStringDefault;
       var startToday = String(request.queryParams.start);
       var endToday = String(request.queryParams.end);
       var startTomorrow = String(request.queryParams.wsd_start_tomorrow);
       var endTomorrow = String(request.queryParams.wsd_end_tomorrow);
-      //gs.info("RC all dates " + startTomorrow + " " + endTomorrow);
 
-      var favSeats = "";
-      if (mostBookedSeat) favSeats += mostBookedSeat;
+      var favSeats = [];
+      if (mostBookedSeat) favSeats.push(mostBookedSeat);
+      //favSeats += mostBookedSeat;
       if (lastBookedSeat && mostBookedSeat != lastBookedSeat)
-        favSeats += "," + lastBookedSeat;
-      // // only push if its unique
-      // if (lastBookedSeat) {
-      //   if (favSeats.indexOf(lastBookedSeat) < 0) favSeats.push(lastBookedSeat);
-      // }
-      gs.info("RC most or last seat " + favSeats.toString());
+        favSeats.push(lastBookedSeat);
+
       // check if fav seats are available
       if (favSeats) searchString = searchStringDefault + "^sys_idIN" + favSeats;
       // building query needs to be added
@@ -53,8 +67,7 @@ WSDSuggestedModelService.prototype = {
         startToday,
         endToday
       );
-      // )
-      // );
+
       // make same call for tomorrow
       // this.api_response.push(
       // JSON.stringify(
@@ -65,9 +78,7 @@ WSDSuggestedModelService.prototype = {
         startTomorrow,
         endTomorrow
       );
-      // )
-      // );
-      // return JSON.stringify(this.api_response);
+      this.printLog();
       return this.api_response;
     } catch (error) {
       gs.error("ERROR in getSeatDetails function " + error);
@@ -79,47 +90,54 @@ WSDSuggestedModelService.prototype = {
    * @param {HttpResponse} response
    * @param {String} searchString @type {encodedQuery}
    * @param {String} start @type {date time}
-   * @param end
+   * @param {String} end @type {date time}
    * @returns
    */
   _makeCallForToday: function (request, response, searchString, start, end) {
     try {
       var when = "today";
-
-      var alreadySuggestedAreaSeats =
-        this._getAlreadySuggestedAreaSeat(
-          String(request.queryParams.wsd_area, when)
-        ) + "";
+      var alreadySuggestedAreaSeats = this._getAlreadySuggestedAreaSeat(
+        String(request.queryParams.wsd_area),
+        when
+      );
       if (alreadySuggestedAreaSeats) {
         searchString += alreadySuggestedAreaSeats + "";
+        this.defaultQueryString += alreadySuggestedAreaSeats + "";
       }
-
+      // this.addLog("search string in api make call ; today " + searchString);
+      this.addLog(
+        "trying with default query to check oob api " + this.defaultQueryString
+      );
       var result = this.callReservableAPI(
         request,
         response,
-        searchString,
+        //searchString,
+        this.defaultQueryString,
         start,
         end
       );
-      gs.info(
-        "RC is it working TODAY ; trying to find fav seat" +
-          JSON.stringify(result)
+      this.addLog(
+        "1st result in make api call ; today " + JSON.stringify(result)
       );
       var favSeatDetails = this.getFirstSpace(result);
+      this.addLog(
+        "after calling fav seat check ; today " + JSON.stringify(favSeatDetails)
+      );
       if (
         favSeatDetails != null &&
         favSeatDetails != undefined &&
         favSeatDetails != ""
       ) {
-        //gs.info("RC fav seat response " + JSON.stringify(favSeatDetails));
         this._storeSuggestedSpace(favSeatDetails, when);
         this._ifUserReservedForToday(favSeatDetails);
         return favSeatDetails;
       } else {
+        searchString = this.defaultQueryString;
+        this.addLog("search string in else ; today  " + searchString);
         var tmpStore = this.getFirstSpace(
           this.callReservableAPI(request, response, searchString, start, end)
         );
-        // gs.info("RC NON fav seat response " + JSON.stringify(tmpStore));
+        this.addLog("after calling tmp store " + JSON.stringify(tmpStore));
         if (tmpStore) {
           this._ifUserReservedForToday(tmpStore);
           this._storeSuggestedSpace(tmpStore, when);
@@ -136,6 +154,29 @@ WSDSuggestedModelService.prototype = {
     }
   },
   /**
+   *
+   * @param {Object} result @type {JSON}
+   * @returns
+   */
+  getFirstSpace: function (result) {
+    try {
+      this.addLog(
+        "result parsed before getting first seat " +
+          JSON.stringify(result.reservableUnits)
+      );
+      if (result.reservableUnits.length > 0) {
+        result.reservableUnits = result.reservableUnits[0];
+        return result.reservableUnits;
+      }
+      return null;
+    } catch (error) {
+      gs.error("Error in getFirstSpace function " + error);
+    }
+
+    // return result.reservableUnits.length > 0 ? result.reservableUnits[0] : null;
+  },
+
+  /**
    * make oob api call to get tomorrows reservation
    * @param {HttpRequest} request
    * @param {HttpRequest} response
@@ -147,13 +188,16 @@ WSDSuggestedModelService.prototype = {
   _makeCallForTomorrow: function (request, response, searchString, start, end) {
     try {
       var when = "tomorrow";
-      var alreadySuggestedAreaSeats =
-        this._getAlreadySuggestedAreaSeat(
-          String(request.queryParams.wsd_area, when)
-        ) + "";
+
+      var alreadySuggestedAreaSeats = this._getAlreadySuggestedAreaSeat(
+        String(request.queryParams.wsd_area),
+        when
+      );
       if (alreadySuggestedAreaSeats) {
         searchString += alreadySuggestedAreaSeats + "";
+        this.defaultQueryString += alreadySuggestedAreaSeats + "";
       }
+
       var result = this.callReservableAPI(
         request,
         response,
@@ -161,22 +205,24 @@ WSDSuggestedModelService.prototype = {
         start,
         end
       );
-      //gs.info("RC is it working TOMORROW " + JSON.stringify(result));
+
       var favSeatDetails = this.getFirstSpace(result);
+
       if (
         favSeatDetails != null &&
         favSeatDetails != undefined &&
         favSeatDetails != ""
       ) {
-        //gs.info("RC fav seat response " + JSON.stringify(favSeatDetails));
         this._storeSuggestedSpace(favSeatDetails, when);
         this._ifUserReservedForToday(favSeatDetails);
         return favSeatDetails;
       } else {
+        searchString = this.defaultQueryString;
+
         var tmpStore = this.getFirstSpace(
           this.callReservableAPI(request, response, searchString, start, end)
         );
-        //gs.info("RC NON fav seat response " + JSON.stringify(tmpStore));
+
         if (tmpStore) {
           this._ifUserReservedForToday(tmpStore);
           this._storeSuggestedSpace(tmpStore, when);
@@ -189,7 +235,7 @@ WSDSuggestedModelService.prototype = {
         };
       }
     } catch (error) {
-      gs.error("ERROR in _makeCallForToday " + error);
+      gs.error("ERROR in _makeCallForTomorrow function " + error);
     }
   },
   /**
@@ -202,54 +248,56 @@ WSDSuggestedModelService.prototype = {
    * @returns
    */
   callReservableAPI: function (request, response, searchString, start, end) {
-    var RESOURCE_PATH = "/api/sn_wsd_rsv/search/suggested_seat";
-    var apiHelper = new WSDApiHelper();
-    var searchService = new WSDSearchService();
-    var reservableModuleService = new WSDReservableModuleService();
-    var restValidator = new WSDRestRequestValidator();
-    var shiftValidator = new WSDShiftValidator();
-    var shiftService = new WSDShiftService();
-    // //gs.info("RC start and end is " + start + " and " + end + "");
-    // searchCriteria is expected to be encodedQuery
-    var requestObj = {
-      searchCriteria: searchString,
-      start: start,
-      end: end,
-      shift: String(request.queryParams.shift),
-      reservable_module: String(request.queryParams.reservable_module),
-      reservation_ids: String(request.queryParams.reservation_ids),
-      reserved_reservables: String(request.queryParams.reserved_reservables),
-      include_unavailable_items: WSDUtils.safeBool(
-        request.queryParams.include_unavailable_items
-      ),
-      include_reservations_within_days: WSDUtils.safeBool(
-        request.queryParams.include_reservations_within_days
-      ),
-      include_standard_services: WSDUtils.safeBool(
-        request.queryParams.include_standard_services
-      ),
-      include_reservable_purposes: WSDUtils.safeBool(
-        request.queryParams.include_reservable_purposes
-      ),
-      next_item_index: Number(request.queryParams.next_item_index),
-      page_size: Number(request.queryParams.page_size),
-      sort_by: String(request.queryParams.sort_by),
-    };
-
-    // If the sort by string ends with :ignore, we'll save the sort option in the user preferences,
-    // but ignore it in the call to searchService.search below
-    var ignoreSortIndex = requestObj.sort_by.indexOf(":ignore");
-    var ignoreSort = ignoreSortIndex >= 0;
-    requestObj.sort_by = ignoreSort
-      ? requestObj.sort_by.substr(0, ignoreSortIndex)
-      : requestObj.sort_by;
-
     try {
+      var RESOURCE_PATH = "/api/sn_wsd_rsv/search/suggested_seat";
+      var apiHelper = new WSDApiHelper();
+      var searchService = new WSDSearchService();
+      var reservableModuleService = new WSDReservableModuleService();
+      var restValidator = new WSDRestRequestValidator();
+      var shiftValidator = new WSDShiftValidator();
+      var shiftService = new WSDShiftService();
+
+      // searchCriteria is expected to be encodedQuery
+      this.addLog("in reservable api func , search query is " + searchString);
+      var requestObj = {
+        searchCriteria: searchString,
+        start: start,
+        end: end,
+        shift: String(request.queryParams.shift),
+        reservable_module: String(request.queryParams.reservable_module),
+        reservation_ids: String(request.queryParams.reservation_ids),
+        reserved_reservables: String(request.queryParams.reserved_reservables),
+        include_unavailable_items: WSDUtils.safeBool(
+          request.queryParams.include_unavailable_items
+        ),
+        include_reservations_within_days: WSDUtils.safeBool(
+          request.queryParams.include_reservations_within_days
+        ),
+        include_standard_services: WSDUtils.safeBool(
+          request.queryParams.include_standard_services
+        ),
+        include_reservable_purposes: WSDUtils.safeBool(
+          request.queryParams.include_reservable_purposes
+        ),
+        next_item_index: Number(request.queryParams.next_item_index),
+        page_size: Number(request.queryParams.page_size),
+        sort_by: String(request.queryParams.sort_by),
+      };
+
+      // If the sort by string ends with :ignore, we'll save the sort option in the user preferences,
+      // but ignore it in the call to searchService.search below
+      var ignoreSortIndex = requestObj.sort_by.indexOf(":ignore");
+      var ignoreSort = ignoreSortIndex >= 0;
+      requestObj.sort_by = ignoreSort
+        ? requestObj.sort_by.substr(0, ignoreSortIndex)
+        : requestObj.sort_by;
+
       var alternateSearchOptions = {};
       // load reservable module
       var reservableModule = reservableModuleService.getReservableModule(
         requestObj.reservable_module
       );
+      // this.addLog("checking reservableModule IF");
       if (!reservableModule) {
         apiHelper.setResponse(
           response,
@@ -261,7 +309,7 @@ WSDSuggestedModelService.prototype = {
         );
         return;
       }
-
+      // this.addLog("checking reservableModule IF passed ");
       // determine if module has shift enabled
       var moduleIsTypeShift = WSDUtils.safeBool(
         reservableModule.apply_to_shift
@@ -272,6 +320,7 @@ WSDSuggestedModelService.prototype = {
         requestObj,
         moduleIsTypeShift
       );
+      // this.addLog("checking validationResult IF  ");
       if (!validationResult.valid) {
         apiHelper.setBadRequestResponse(
           response,
@@ -284,12 +333,13 @@ WSDSuggestedModelService.prototype = {
         );
         return;
       }
-
+      // this.addLog("checking validationResult IF  passed ");
       // validate actual search request data against the system, and return proper search request (correct time format etc...)
       var resolverResult = restValidator.validateAndResolveSearchRequest(
         requestObj,
         moduleIsTypeShift
       );
+      // this.addLog("checking resolverResult IF  ");
       if (!resolverResult.valid) {
         apiHelper.setBadRequestResponse(
           response,
@@ -303,15 +353,16 @@ WSDSuggestedModelService.prototype = {
         );
         return;
       }
+      this.addLog("reached till shift check - passed");
 
       var searchRequest = resolverResult.searchRequest;
-      //gs.info("RC searchRequest " + JSON.stringify(searchRequest));
 
       if (moduleIsTypeShift) {
         var shiftValidatorOutcome = shiftValidator.validateShiftAndStartEnd(
           searchRequest.shift,
           searchRequest.startGdt
         );
+        // this.addLog("checking shiftValidatorOutcome IF  ");
         if (!shiftValidatorOutcome.valid) {
           var shiftInvalidErrorMsg = shiftValidatorOutcome.user_msg
             ? shiftValidatorOutcome.user_msg
@@ -327,6 +378,7 @@ WSDSuggestedModelService.prototype = {
           );
           return;
         }
+        // this.addLog("checking shiftValidatorOutcome IF passed ");
 
         var shiftValidatorPayload = shiftValidatorOutcome.payload;
         searchRequest.startGdt = shiftValidatorPayload.startGdt;
@@ -350,6 +402,7 @@ WSDSuggestedModelService.prototype = {
         alternateSearchOptions
       );
     } catch (ex) {
+      this.addLog("in exception block of reservable api " + ex);
       apiHelper.setResponse(
         response,
         500,
@@ -379,12 +432,14 @@ WSDSuggestedModelService.prototype = {
       tracker.query();
       if (tracker.next()) {
         tracker.u_status = "booked";
+        tracker.u_booked_time.setValue(this._getDateTimeUTC(0));
         tracker.update();
       } else {
         tracker.initialize();
         tracker.u_location = current.location.sys_id + "";
         tracker.u_user = current.requested_for.sys_id + "";
         tracker.u_area = current.location.area.sys_id + "";
+        tracker.u_booked_time.setValue(this._getDateTimeUTC(0));
         tracker.u_status = "booked";
         tracker.insert();
       }
@@ -430,31 +485,33 @@ WSDSuggestedModelService.prototype = {
    */
   _getAlreadySuggestedAreaSeat: function (area_id, when) {
     try {
-    } catch (error) {}
-    //u_location.ref_sn_wsd_core_area.building.sys_id=
-    //gs.info("RC - find used seat " + area_id);
-    var ids = "";
-    var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
-    // when is the last suggestion been made
-    // either today or tomorrow
-    if (when == "today")
-      tracker.addEncodedQuery(
-        "u_last_suggestion_timeONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
-      );
-    else if (when == "tomorrow")
-      tracker.addEncodedQuery(
-        "u_last_suggestion_timeONTomorrow@javascript:gs.beginningOfTomorrow()@javascript:gs.endOfTomorrow()"
-      );
-    tracker.addQuery("u_area.sys_id", area_id);
-    tracker.addQuery("u_status", "suggested");
-    tracker.query();
-    //gs.info("RC used seat " + tracker.getRowCount());
-    while (tracker.next()) {
-      //ids.push("^sys_id!=" + tracker.u_location.sys_id + "");
-      ids += "^sys_id!=" + tracker.u_location.sys_id;
+      //u_location.ref_sn_wsd_core_area.building.sys_id=
+      this.addLog("do i get when ? " + when);
+      var ids = "";
+      var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
+      // when is the last suggestion been made
+      // either today or tomorrow
+      if (when == "today")
+        tracker.addEncodedQuery(
+          "u_last_suggestion_timeONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
+        );
+      else if (when == "tomorrow")
+        tracker.addEncodedQuery(
+          "u_last_suggestion_timeONTomorrow@javascript:gs.beginningOfTomorrow()@javascript:gs.endOfTomorrow()"
+        );
+      tracker.addQuery("u_area.sys_id", area_id);
+      tracker.addQuery("u_status", "suggested");
+      tracker.query();
+      this.addLog("RC suggested seat query " + tracker.getEncodedQuery());
+      while (tracker.next()) {
+        //ids.push("^sys_id!=" + tracker.u_location.sys_id + "");
+        ids += "^sys_id!=" + tracker.u_location.sys_id;
+      }
+      if (ids.length > 0) return ids.toString();
+      return "";
+    } catch (error) {
+      gs.error("Error in _getAlreadySuggestedAreaSeat function " + error);
     }
-    if (ids.length > 0) return ids.toString();
-    return "";
   },
   /**
    *
@@ -463,94 +520,110 @@ WSDSuggestedModelService.prototype = {
    * @returns {void}
    */
   _storeSuggestedSpace: function (seatDetailsObject, when) {
-    //gs.info("RC _storeSuggestedSpace " + JSON.stringify(seatDetailsObject));
-    // var parsedSeatDetails = JSON.parse(seatDetailsObject)
-    var shrt = seatDetailsObject;
-    var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
-    if (when == "today")
-      tracker.addEncodedQuery(
-        "u_last_suggestion_timeONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
-      );
-    else if (when == "tomorrow")
-      tracker.addEncodedQuery(
-        "u_last_suggestion_timeONTomorrow@javascript:gs.beginningOfTomorrow()@javascript:gs.endOfTomorrow()"
-      );
-    tracker.addQuery("u_area.sys_id", shrt.area.sys_id + "");
-    tracker.addQuery("u_user", gs.getUserID() + "");
-    tracker.addQuery("u_status", "!=", "booked");
-    tracker.query();
-    if (tracker.next()) {
-      tracker.u_location = shrt.sys_id + "";
-      tracker.u_area = shrt.area.sys_id + "";
-      tracker.u_suggestion_count += 1;
-      tracker.u_last_suggestion_time = this._getDateTimeUTC();
-      tracker.update();
-    } else {
-      tracker.initialize();
-      tracker.u_location = shrt.sys_id + "";
-      tracker.u_user = gs.getUserID() + "";
-      tracker.u_area = shrt.area.sys_id + "";
-      tracker.u_status = "suggested";
-      tracker.u_suggestion_count = 1;
-      tracker.u_last_suggestion_time = this._getDateTimeUTC();
-      tracker.insert();
-    }
+    try {
+      // var parsedSeatDetails = JSON.parse(seatDetailsObject)
+      var shrt = seatDetailsObject;
+      var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
+      if (when == "today")
+        tracker.addEncodedQuery(
+          "u_last_suggestion_timeONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
+        );
+      else if (when == "tomorrow")
+        tracker.addEncodedQuery(
+          "u_last_suggestion_timeONTomorrow@javascript:gs.beginningOfTomorrow()@javascript:gs.endOfTomorrow()"
+        );
+      tracker.addQuery("u_area.sys_id", shrt.area.sys_id + "");
+      tracker.addQuery("u_user", gs.getUserID() + "");
+      tracker.addQuery("u_status", "!=", "booked");
+      tracker.query();
+      if (tracker.next()) {
+        tracker.u_location = shrt.sys_id + "";
+        tracker.u_area = shrt.area.sys_id + "";
+        tracker.u_suggestion_count += 1;
+        tracker.u_last_suggestion_time.setValue(
+          when == "today" ? this._getDateTimeUTC() : this._getDateTimeUTC(1)
+        );
+        if (this.mostBooked) tracker.u_suggestion_type = "most_booked";
+        else if (this.lastBooked) tracker.u_suggestion_type = "last_booked";
+        else tracker.u_suggestion_type = this.defaultSuggestionType;
+        tracker.update();
+      } else {
+        tracker.initialize();
+        tracker.u_location = shrt.sys_id + "";
+        tracker.u_user = gs.getUserID() + "";
+        tracker.u_area = shrt.area.sys_id + "";
+        tracker.u_status = "suggested";
+        tracker.u_suggestion_count = 1;
+        tracker.u_last_suggestion_time.setValue(
+          when == "today" ? this._getDateTimeUTC() : this._getDateTimeUTC(1)
+        );
+        if (this.mostBooked) tracker.u_suggestion_type = "most_booked";
+        else if (this.lastBooked) tracker.u_suggestion_type = "last_booked";
+        else tracker.u_suggestion_type = this.defaultSuggestionType;
+        tracker.insert();
+      }
 
-    return;
+      return;
+    } catch (error) {
+      gs.error("Error in _storeSuggestedSpace function " + error);
+    }
   },
   /**
    *
    * @returns {String} return current date time in UTC
    */
-  _getDateTimeUTC: function () {
-    return new GlideDateTime().getValue();
+  _getDateTimeUTC: function (days) {
+    try {
+      var gdt = new GlideDateTime();
+      if (days) {
+        gdt.addDaysUTC(days);
+      }
+      return gdt.getValue();
+    } catch (error) {
+      gs.error("Error in _getDateTimeUTC function " + error);
+    }
   },
   getMostBookedSeat: function (user) {
-    var ga = new GlideAggregate("sn_wsd_rsv_reservation");
-    ga.addQuery("requested_for", user);
-    ga.addAggregate("COUNT", "location");
-    ga.orderByAggregate("COUNT", "location");
-    ga.query();
-    var i = 0;
-    var space = "";
-    while (ga.next() && i++ < 1) {
-      space = ga.getValue("location").toString();
-      return space;
+    try {
+      var ga = new GlideAggregate("sn_wsd_rsv_reservation");
+      ga.addQuery("requested_for", user);
+      ga.addAggregate("COUNT", "location");
+      ga.orderByAggregate("COUNT", "location");
+      ga.query();
+      var i = 0;
+      var space = "";
+      while (ga.next()) {
+        space = ga.getValue("location").toString();
+        var count = ga.getAggregate("COUNT", "location");
+        if (count >= 3) {
+          this.mostBooked = true;
+          return space;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      gs.error("Error in function getMostBookedSeat " + error);
     }
-    //gs.info("getMostBookedSeats==" + space);
-    return null;
   },
 
   getLastBookedSeat: function (user) {
-    var gr = new GlideRecord("sn_wsd_rsv_reservation");
-    gr.addEncodedQuery("requested_for=" + user); //Check any filters on state to be kept for finding last reserved space
-    gr.orderByDesc("sys_updated_on");
-    gr.query();
-    var space = "";
-    if (gr.next()) {
-      //gs.info("getLastBookedSeat==" + gr.getValue("location"));
-      space = gr.getValue("location").toString();
-      return space;
-    }
-    return null;
-  },
+    try {
+      var gr = new GlideRecord("sn_wsd_rsv_reservation");
+      gr.addEncodedQuery("requested_for=" + user); //Check any filters on state to be kept for finding last reserved space
+      gr.orderByDesc("sys_updated_on");
+      gr.query();
+      var space = "";
+      if (gr.next()) {
+        space = gr.getValue("location").toString();
 
-  getFirstSpace: function (result) {
-    var reservableUnits = "";
-    var parser = new global.JSONParser();
-    var parsed = parser.parse(global.JSON.stringify(result));
-    reservableUnits = parsed.reservableUnits[0];
-    // //gs.info(
-    //   "RC Scripted Rest API getFirstSpace function Result reservableUnits === " +
-    //     reservableUnits
-    // );
-    if (
-      reservableUnits != "" &&
-      reservableUnits != undefined &&
-      reservableUnits != null
-    )
-      return reservableUnits;
-    return "";
+        this.lastBooked = true;
+        return space;
+      }
+      return null;
+    } catch (error) {
+      gs.error("Error in function getLastBookedSeat " + error);
+    }
   },
 
   type: "WSDSuggestedModelService",

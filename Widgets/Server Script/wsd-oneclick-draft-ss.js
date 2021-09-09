@@ -12,7 +12,7 @@
    * via a new field
    */
   if (input && input.action && input.action == "getBuildingModule") {
-    data.building_module_details = _getReservableModuleAndBuilding();
+    data.building_module_details = _buildSearchPackage();
     data.search_object_template = JSON.parse(
       gs.getProperty("sn_wsd_rsv.one_click.search.object.template")
     );
@@ -63,7 +63,7 @@
    *
    * @returns {Object}
    */
-  function _getReservableModuleAndBuilding() {
+  function _buildSearchPackage() {
     var tmpObj = {};
     var profile = new GlideRecord("sn_wsd_core_workplace_profile");
     if (profile.get("employee", gs.getUserID())) {
@@ -86,6 +86,9 @@
           profile.workplace_location.sys_class_name == "sn_wsd_core_space"
         )
           tmpObj.user_area_id = profile.workplace_location.area.sys_id + "";
+        // phase controls some UI validation / msg
+        tmpObj.building_phase =
+          profile.workplace_location.building.u_phase + "";
       } else {
         tmpObj.status = "invalid_profile";
         tmpObj.user_building_id = "";
@@ -95,9 +98,5 @@
       tmpObj.status = "invalid_user";
     }
     return tmpObj;
-    // var searchService = new WSDSearchService();
-    // var buildingModuleDetails =
-    //   searchService.getReservableModuleAndBuilding(buildingID);
-    // console.log("RC build details " + buildingModuleDetails);
   }
 })();
