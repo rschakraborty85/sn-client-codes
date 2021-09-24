@@ -1,8 +1,13 @@
 var WSDSuggestedModelService = Class.create();
 WSDSuggestedModelService.prototype = {
+  // TODO no validation if user doesn't have valid reservable module in workplace profile
+  // FIXME should show maybe common error message if above is true
   initialize: function () {
     try {
       this.error_msg = gs.getMessage("one_click_error_msg");
+      this.isLogOn = gs.getProperty("sn_wsd_rsv.one_click.turn_on.log")
+        ? gs.getProperty("sn_wsd_rsv.one_click.turn_on.log")
+        : false;
       this.api_response = {};
       this.defaultQueryString = "";
       this.mostBooked = false;
@@ -10,13 +15,17 @@ WSDSuggestedModelService.prototype = {
       this.defaultSuggestionType = "random";
       this.msg = "<WSDSuggestedModelService Logger>";
       this.nl = "\n";
+      /**
+       *
+       * @param {String} msg
+       */
       this.addLog = function (msg) {
         this.msg += this.nl;
         this.msg += msg;
         this.msg += this.nl;
       };
       this.printLog = function () {
-        gs.warn("Printing Logs So far " + this.msg);
+        gs.warn(this.msg);
       };
     } catch (error) {
       gs.error("Error in initialize function " + error);
@@ -78,10 +87,48 @@ WSDSuggestedModelService.prototype = {
         startTomorrow,
         endTomorrow
       );
-      this.printLog();
+      this.isLogOn ? this.printLog() : "";
       return this.api_response;
     } catch (error) {
       gs.error("ERROR in getSeatDetails function " + error);
+    }
+  },
+  /**
+   *
+   * @param area_id @type {String}
+   * @param when @type {String}
+   * @returns {String} ids
+   */
+  _getAlreadySuggestedAreaSeat: function (area_id, when) {
+    try {
+      //u_location.ref_sn_wsd_core_area.building.sys_id=
+      this.addLog("do i get when ? " + when);
+      var ids = "";
+      var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
+      // when is the last suggestion been made
+      // either today or tomorrow
+      if (when == "today")
+        tracker.addEncodedQuery(
+          "u_last_suggestion_timeONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
+        );
+      else if (when == "tomorrow")
+        tracker.addEncodedQuery(
+          "u_last_suggestion_timeONTomorrow@javascript:gs.beginningOfTomorrow()@javascript:gs.endOfTomorrow()"
+        );
+      tracker.addQuery("u_area.sys_id", area_id);
+      tracker.addQuery("u_status", "suggested");
+      tracker.query();
+      this.addLog(
+        "RC suggested seat encoded query " + tracker.getEncodedQuery()
+      );
+      while (tracker.next()) {
+        //ids.push("^sys_id!=" + tracker.u_location.sys_id + "");
+        ids += "^sys_id!=" + tracker.u_location.sys_id;
+      }
+      if (ids.length > 0) return ids.toString();
+      return "";
+    } catch (error) {
+      gs.error("Error in _getAlreadySuggestedAreaSeat function " + error);
     }
   },
   /**
@@ -105,41 +152,41 @@ WSDSuggestedModelService.prototype = {
         this.defaultQueryString += alreadySuggestedAreaSeats + "";
       }
       // this.addLog("search string in api make call ; today " + searchString);
-      this.addLog(
-        "trying with default query to check oob api " + this.defaultQueryString
-      );
+      // this.addLog(
+      //   "trying with default query to check oob api " + this.defaultQueryString
+      // );
       var result = this.callReservableAPI(
         request,
         response,
-        //searchString,
-        this.defaultQueryString,
+        searchString,
+        //this.defaultQueryString,
         start,
         end
       );
-      this.addLog(
-        "1st result in make api call ; today " + JSON.stringify(result)
-      );
+      // this.addLog(
+      //   "1st result in make api call ; today " + JSON.stringify(result)
+      // );
       var favSeatDetails = this.getFirstSpace(result);
-      this.addLog(
-        "after calling fav seat check ; today " + JSON.stringify(favSeatDetails)
-      );
+      // this.addLog(
+      //   "after calling fav seat check ; today " + JSON.stringify(favSeatDetails)
+      // );
       if (
         favSeatDetails != null &&
         favSeatDetails != undefined &&
         favSeatDetails != ""
       ) {
         this._storeSuggestedSpace(favSeatDetails, when);
-        this._ifUserReservedForToday(favSeatDetails);
+        favSeatDetails = this._ifUserReservedForToday(favSeatDetails);
         return favSeatDetails;
       } else {
         searchString = this.defaultQueryString;
-        this.addLog("search string in else ; today  " + searchString);
+        // this.addLog("search string in else ; today  " + searchString);
         var tmpStore = this.getFirstSpace(
           this.callReservableAPI(request, response, searchString, start, end)
         );
-        this.addLog("after calling tmp store " + JSON.stringify(tmpStore));
+        // this.addLog("after calling tmp store " + JSON.stringify(tmpStore));
         if (tmpStore) {
-          this._ifUserReservedForToday(tmpStore);
+          tmpStore = this._ifUserReservedForToday(tmpStore);
           this._storeSuggestedSpace(tmpStore, when);
           return tmpStore;
         }
@@ -153,29 +200,6 @@ WSDSuggestedModelService.prototype = {
       gs.error("ERROR in _makeCallForToday function " + error);
     }
   },
-  /**
-   *
-   * @param {Object} result @type {JSON}
-   * @returns
-   */
-  getFirstSpace: function (result) {
-    try {
-      this.addLog(
-        "result parsed before getting first seat " +
-          JSON.stringify(result.reservableUnits)
-      );
-      if (result.reservableUnits.length > 0) {
-        result.reservableUnits = result.reservableUnits[0];
-        return result.reservableUnits;
-      }
-      return null;
-    } catch (error) {
-      gs.error("Error in getFirstSpace function " + error);
-    }
-
-    // return result.reservableUnits.length > 0 ? result.reservableUnits[0] : null;
-  },
-
   /**
    * make oob api call to get tomorrows reservation
    * @param {HttpRequest} request
@@ -214,18 +238,22 @@ WSDSuggestedModelService.prototype = {
         favSeatDetails != ""
       ) {
         this._storeSuggestedSpace(favSeatDetails, when);
-        this._ifUserReservedForToday(favSeatDetails);
+        // this._ifUserReservedForToday(favSeatDetails);
+        this.addLog("TOMORROW - fav seat " + JSON.stringify(favSeatDetails));
         return favSeatDetails;
       } else {
         searchString = this.defaultQueryString;
-
+        this.addLog(
+          "TOMORROW - else part of it ; query string is  " + searchString
+        );
         var tmpStore = this.getFirstSpace(
           this.callReservableAPI(request, response, searchString, start, end)
         );
 
         if (tmpStore) {
-          this._ifUserReservedForToday(tmpStore);
+          // this._ifUserReservedForToday(tmpStore);
           this._storeSuggestedSpace(tmpStore, when);
+          this.addLog("TOMORROW - tmp store " + JSON.stringify(tmpStore));
           return tmpStore;
         }
         // error handling - common message
@@ -238,6 +266,29 @@ WSDSuggestedModelService.prototype = {
       gs.error("ERROR in _makeCallForTomorrow function " + error);
     }
   },
+  /**
+   *
+   * @param {Object} result @type {JSON}
+   * @returns
+   */
+  getFirstSpace: function (result) {
+    try {
+      // this.addLog(
+      //   "result parsed before getting first seat " +
+      //     JSON.stringify(result.reservableUnits)
+      // );
+      if (result.reservableUnits.length > 0) {
+        result.reservableUnits = result.reservableUnits[0];
+        return result.reservableUnits;
+      }
+      return null;
+    } catch (error) {
+      gs.error("Error in getFirstSpace function " + error);
+    }
+
+    // return result.reservableUnits.length > 0 ? result.reservableUnits[0] : null;
+  },
+
   /**
    *
    * @param {HttpRequest} request
@@ -353,9 +404,10 @@ WSDSuggestedModelService.prototype = {
         );
         return;
       }
-      this.addLog("reached till shift check - passed");
+      //this.addLog("reached till shift check - passed");
 
       var searchRequest = resolverResult.searchRequest;
+      this.addLog("searchRequest json " + JSON.stringify(searchRequest));
 
       if (moduleIsTypeShift) {
         var shiftValidatorOutcome = shiftValidator.validateShiftAndStartEnd(
@@ -384,10 +436,9 @@ WSDSuggestedModelService.prototype = {
         searchRequest.startGdt = shiftValidatorPayload.startGdt;
         searchRequest.endGdt = shiftValidatorPayload.endGdt;
         searchRequest.shiftGr = shiftValidatorPayload.shiftGr;
-        alternateSearchOptions.reservable_filter =
-          shiftService.generateEncodedQueryForLocationsOfShift(
-            searchRequest.shift
-          );
+        alternateSearchOptions.reservable_filter = shiftService.generateEncodedQueryForLocationsOfShift(
+          searchRequest.shift
+        );
       }
       searchService.saveSearch(
         searchRequest.reservable_module,
@@ -462,57 +513,30 @@ WSDSuggestedModelService.prototype = {
       reserveGR.query();
       seatDetailsObject.oc_reservation_status = {};
       seatDetailsObject.oc_reservation_status.exist = false;
+      // TODO if reservation is booked for tomorrow , the completed message still comes
+      // FIXME fix above !
+
+      this.addLog(
+        "checking if user has reservation TODAY " +
+          gs.getUserName() +
+          " " +
+          reserveGR.getEncodedQuery()
+      );
       if (reserveGR.next()) {
         seatDetailsObject.oc_reservation_status.exist = true;
         seatDetailsObject.oc_reservation_status.state = reserveGR.state + "";
         seatDetailsObject.oc_reservation_status.location =
           reserveGR.location + "";
-        seatDetailsObject.oc_reservation_status.state_label =
-          reserveGR.state.getDisplayValue();
-        seatDetailsObject.oc_reservation_status.location_label =
-          reserveGR.location.getDisplayValue();
+        seatDetailsObject.oc_reservation_status.state_label = reserveGR.state.getDisplayValue();
+        seatDetailsObject.oc_reservation_status.location_label = reserveGR.location.getDisplayValue();
         seatDetailsObject.oc_reservation_status.rsv_id = reserveGR.sys_id + "";
       }
+      return seatDetailsObject;
     } catch (error) {
       gs.error("Error in _ifUserReservedForToday function " + error);
     }
   },
-  /**
-   *
-   * @param area_id
-   * @param when
-   * @returns
-   */
-  _getAlreadySuggestedAreaSeat: function (area_id, when) {
-    try {
-      //u_location.ref_sn_wsd_core_area.building.sys_id=
-      this.addLog("do i get when ? " + when);
-      var ids = "";
-      var tracker = new GlideRecord("sn_wsd_rsv_suggested_space_tracker");
-      // when is the last suggestion been made
-      // either today or tomorrow
-      if (when == "today")
-        tracker.addEncodedQuery(
-          "u_last_suggestion_timeONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()"
-        );
-      else if (when == "tomorrow")
-        tracker.addEncodedQuery(
-          "u_last_suggestion_timeONTomorrow@javascript:gs.beginningOfTomorrow()@javascript:gs.endOfTomorrow()"
-        );
-      tracker.addQuery("u_area.sys_id", area_id);
-      tracker.addQuery("u_status", "suggested");
-      tracker.query();
-      this.addLog("RC suggested seat query " + tracker.getEncodedQuery());
-      while (tracker.next()) {
-        //ids.push("^sys_id!=" + tracker.u_location.sys_id + "");
-        ids += "^sys_id!=" + tracker.u_location.sys_id;
-      }
-      if (ids.length > 0) return ids.toString();
-      return "";
-    } catch (error) {
-      gs.error("Error in _getAlreadySuggestedAreaSeat function " + error);
-    }
-  },
+
   /**
    *
    * @param {Object} seatDetailsObject
@@ -536,6 +560,12 @@ WSDSuggestedModelService.prototype = {
       tracker.addQuery("u_user", gs.getUserID() + "");
       tracker.addQuery("u_status", "!=", "booked");
       tracker.query();
+      this.addLog(
+        "insert or update suggested space ? " +
+          tracker.getRowCount() +
+          " " +
+          tracker.getEncodedQuery()
+      );
       if (tracker.next()) {
         tracker.u_location = shrt.sys_id + "";
         tracker.u_area = shrt.area.sys_id + "";

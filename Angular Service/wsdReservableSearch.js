@@ -3,8 +3,7 @@
  * Reservable search provider - handle search execution to target Rest Api endpoints
  * custom type definitions can be found at the bottom of the file.
  * */
-function wsdReservableSearch($http) {
-  // console.log("RC reached wsdReservableSearch");
+ function wsdReservableSearch($http) {
   var RESERVABLE_SEARCH_BASE_URL = "/api/sn_wsd_rsv/search/reservable";
   var RESERVABLE_AVAILABLITY_BASE_URL = "/api/sn_wsd_rsv/search/availability";
   var RESERVABLE_MODULE_BASE_URL = "/api/sn_wsd_rsv/reservable_module/";
@@ -32,21 +31,11 @@ function wsdReservableSearch($http) {
    *  in the reservable module
    */
   function getSuggestedSeat(requestObj) {
-    // console.log("RC - calling api " + JSON.stringify(requestObj));
     var url = _constructSearchReservablesQueryStr(
       RESERVABLE_SEARCH_SUGGESTED_SEAT_URL,
       requestObj
     );
-    console.log("RC one click research " + url);
-    return $http.get(url).then(_resultParser);
-  }
-  function getSuggestedSeat2(requestObj) {
-    // console.log("RC - calling api " + JSON.stringify(requestObj));
-    var url = _constructSearchReservablesQueryStr(
-      RESERVABLE_SEARCH_SUGGESTED_SEAT_URL,
-      requestObj
-    );
-    //console.log("RC one click research " + url);
+    // console.log("RC one click research " + url);
     return $http.get(url).then(_resultParser);
   }
 
@@ -68,17 +57,11 @@ function wsdReservableSearch($http) {
    *  in the reservable module
    */
   function getAvailableReservables(requestObj) {
-    // console.log(
-    //   "RC getAvailableReservables function , query json for one click " +
-    //     JSON.stringify(requestObj)
-    // );
-
     var url = _constructSearchReservablesQueryStr(
       RESERVABLE_SEARCH_BASE_URL,
       requestObj
     );
 
-    //console.log("RC one click research " + url);
     return $http.get(url).then(_resultParser);
   }
 
@@ -122,6 +105,10 @@ function wsdReservableSearch($http) {
     if (requestObj.next_item_index)
       url += "&next_item_index=" + requestObj.next_item_index;
 
+	//STRY2456995:Workspace Search Changes - Workplace Reservation Management  
+    if (requestObj.is_load)
+      url += "&is_load=true";
+  
     if (requestObj.mode === "edit") {
       url += "&reservation_ids=" + requestObj.reservation_ids;
       url += "&reserved_reservables=" + requestObj.reserved_reservables;
@@ -140,10 +127,13 @@ function wsdReservableSearch($http) {
     // RC - added custom query - start
     // one click feature - force to consider our query
     if (requestObj.q) url += "^" + requestObj.q;
-    //console.log("RC area is " + requestObj.wsd_area);
+
     if (requestObj.wsd_area) url += "&wsd_area=" + requestObj.wsd_area;
-    if (requestObj.wsd_building_phase)
-      url += "&wsd_building_phase=" + requestObj.wsd_building_phase;
+    if (requestObj.wsd_start_tomorrow)
+      url += "&wsd_start_tomorrow=" + requestObj.wsd_start_tomorrow;
+
+    if (requestObj.wsd_end_tomorrow)
+      url += "&wsd_end_tomorrow=" + requestObj.wsd_end_tomorrow;
 
     // RC - end
     if (requestObj.floors) url += "^floorIN" + requestObj.floors;
@@ -177,7 +167,7 @@ function wsdReservableSearch($http) {
     checkReservablesAvailabilities: checkReservablesAvailabilities,
     checkExistingReservation: checkExistingReservation,
     getSuggestedSeat: getSuggestedSeat,
-    getSuggestedSeat2: getSuggestedSeat2,
+
   };
 
   /**

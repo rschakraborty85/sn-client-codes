@@ -42,9 +42,9 @@
         data.initSearchConfig = new WSDSearchService().getInitSearchConfig(
           data.reservable_module
         );
-        console.log(
-          "RC initSearchConfig json " + JSON.stringify(data.initSearchConfig)
-        );
+         console.log(
+           "RC initSearchConfig json " + JSON.stringify(data.initSearchConfig)
+         );
       } catch (error) {
         // console.log("RC ERROR initialize 2 " + error);
       }

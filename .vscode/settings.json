@@ -1,5 +1,7 @@
 {
     "cSpell.words": [
         "gliderecord"
-    ]
+    ],
+    "editor.wordWrap": "on",
+    "todo-tree.tree.showBadges": true
 }

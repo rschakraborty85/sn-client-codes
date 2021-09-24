@@ -38,7 +38,7 @@
           </label>
           <div
             class="building-picker"
-            ng-class="{ 'is-invalid': hasSearched && !building.value }"
+            ng-class="{'is-invalid': hasSearched && !building.value}"
           >
             <sn-record-picker
               id="building-picker"
@@ -65,9 +65,7 @@
           >
             <strong
               ><span
-                ng-class="
-                  !reservable_module.value ? 'mandatory' : 'mandatory-filled'
-                "
+                ng-class="!reservable_module.value ? 'mandatory' : 'mandatory-filled'"
                 >*</span
               ></strong
             >
@@ -75,7 +73,7 @@
           </label>
           <div
             class="module-picker"
-            ng-class="{ 'is-invalid': hasSearched && !reservable_module.value }"
+            ng-class="{'is-invalid': hasSearched && !reservable_module.value}"
           >
             <sn-record-picker
               id="reservable-module-picker"
@@ -103,11 +101,7 @@
           >
             <strong
               ><span
-                ng-class="
-                  !$parent.selectedShift.value
-                    ? 'mandatory'
-                    : 'mandatory-filled'
-                "
+                ng-class="!$parent.selectedShift.value ? 'mandatory' : 'mandatory-filled'"
                 >*</span
               ></strong
             >
@@ -115,7 +109,7 @@
           </label>
           <div
             class="module-picker"
-            ng-class="{ 'is-invalid': hasSearched && !reservable_module.value }"
+            ng-class="{'is-invalid': hasSearched && !reservable_module.value}"
           >
             <sn-record-picker
               id="reservable-shift-picker"
@@ -143,9 +137,7 @@
           >
             <strong
               ><span
-                ng-class="
-                  !$parent.shiftStart.value ? 'mandatory' : 'mandatory-filled'
-                "
+                ng-class="!$parent.shiftStart.value ? 'mandatory' : 'mandatory-filled'"
                 >*</span
               ></strong
             >
@@ -153,7 +145,7 @@
           </label>
           <div
             class="module-picker"
-            ng-class="{ 'is-invalid': hasSearched && !reservable_module.value }"
+            ng-class="{'is-invalid': hasSearched && !reservable_module.value}"
           >
             <sp-date-picker
               field="{name: 'shift_start_date'}"
@@ -231,8 +223,7 @@
             id="recurringSlider"
             data="isRecurring"
             wsd-on-change="onIsRecurringChanged"
-          >
-          </wsd-slider>
+          ></wsd-slider>
         </div>
       </div>
       <div class="flex-row all-day-selection" ng-if="enableAllDayOption">
@@ -262,11 +253,8 @@
           </label>
           <div class="control-view">
             <div id="shiftDetails">
-              {{
-                hasSelectedShift() && selectedShift.shiftDetails
-                  ? selectedShift.shiftDetails
-                  : "N.A"
-              }}
+              {{hasSelectedShift() && selectedShift.shiftDetails ?
+              selectedShift.shiftDetails : 'N.A'}}
             </div>
           </div>
         </div>
@@ -281,11 +269,7 @@
           >
             <strong
               ><span
-                ng-class="
-                  !$parent.shiftRecurringEnd.value
-                    ? 'mandatory'
-                    : 'mandatory-filled'
-                "
+                ng-class="!$parent.shiftRecurringEnd.value ? 'mandatory' : 'mandatory-filled'"
                 >*</span
               ></strong
             >
@@ -293,7 +277,7 @@
           </label>
           <div
             class="module-picker"
-            ng-class="{ 'is-invalid': hasSearched && !reservable_module.value }"
+            ng-class="{'is-invalid': hasSearched && !reservable_module.value}"
           >
             <sp-date-picker
               field="{name: 'shift_recurring_end_date'}"
@@ -346,7 +330,7 @@
           </label>
           <wsd-day-selector
             ng-model="recurringDays"
-            on-change="(triggerCalcOccurrences)"
+            on-change="triggerCalcOccurrences"
           ></wsd-day-selector>
         </div>
         <div class="col-2-max-flex-width flex col-pad">
@@ -404,9 +388,7 @@
           >
             <strong
               ><span
-                ng-class="
-                  !recurringEnd.value ? 'mandatory' : 'mandatory-filled'
-                "
+                ng-class="!recurringEnd.value ? 'mandatory' : 'mandatory-filled'"
                 >*</span
               ></strong
             >
@@ -422,7 +404,7 @@
             </sp-date-picker>
           </div>
           <small class="text-muted line-height-30"
-            >{{ amountOfOccurrences }} ${occurrences}</small
+            >{{amountOfOccurrences}} ${occurrences}</small
           >
         </div>
       </div>

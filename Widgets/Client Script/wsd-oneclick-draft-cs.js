@@ -17,7 +17,7 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
    */
   c.redirectToReservation = function (flag) {
     //
-    console.log("RC link to reservation " + flag);
+    // console.log("RC link to reservation " + flag);
 
     if (flag == "today") {
       $window.location.href =
@@ -51,6 +51,7 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
         response.data.building_module_details.status == "valid_profile"
           ? true
           : false;
+      console.log("RC valid profile ? " + c.valid_profile);
       if (c.valid_profile) {
         var phase = response.data.building_module_details.building_phase + "";
         // console.log("RC phase is " + phase);
@@ -87,12 +88,12 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
         // console.log("RC lets see what we get1 " + JSON.stringify(respToday));
 
         // this is for today
-        c.result = _parseResponse(respToday);
+        c.result = _parseResponse(respToday, "today");
         if (c.result.error) {
           c.result = _callErrorHandler(respToday);
         }
         // this is for tomorrow
-        c.result2 = _parseResponse(respTomorrow);
+        c.result2 = _parseResponse(respTomorrow, "tomorrow");
         if (c.result2.error) {
           c.result2 = _callErrorHandler(respTomorrow);
         }
@@ -118,13 +119,8 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
    * to parse rest api call response
    * @param {*} response
    */
-  function _parseResponse(response) {
-    // console.log(
-    //   "RC - parse response " + JSON.stringify(response)
-    //   // +
-    //   // " " +
-    //   //typeof response.error
-    // );
+  function _parseResponse(response, when) {
+    console.log("RC - parse response from api " + JSON.stringify(response));
     if (response.error) {
       return response;
     }
@@ -134,7 +130,10 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
     result.seat_floor_label = tmpObj.floor.display_value + "";
     result.seat_space_label = tmpObj.name + "";
     result.seat_space_sys_id = tmpObj.sys_id + "";
-    c.reservation_status = tmpObj.oc_reservation_status.exist;
+    if (when == "today")
+      c.reservation_status = tmpObj.oc_reservation_status
+        ? tmpObj.oc_reservation_status.exist
+        : false;
     c.reservation_status_text = c.reservation_status ? "Completed" : "Pending";
     return result;
   }
@@ -161,7 +160,6 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
     searchObj.wsd_area = resp.building_module_details.user_area_id;
     searchObj.wsd_start_tomorrow = resp.next_date_utc.start;
     searchObj.wsd_end_tomorrow = resp.next_date_utc.end;
-    // not required right now
     searchObj.wsd_building_phase =
       resp.building_module_details.building_phase + "";
     // keep a copy of the below data , mostly for reserve
