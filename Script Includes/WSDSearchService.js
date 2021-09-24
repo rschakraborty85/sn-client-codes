@@ -13,7 +13,7 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
     "sys_id",
   ],
   // RC - overriding for testing purposes
-  SUPPORTED_GR_OPERATION: [">=", "=", "IN", "CONTAINS", "ISNOTEMPTY", "!="],
+  SUPPORTED_GR_OPERATION: [">=", "=", "!=", "IN", "CONTAINS", "ISNOTEMPTY"],
   /**
    * Not ideal logic but will work as of now - 24th aug 21
    * find module based on area select = true / false of building
@@ -158,14 +158,16 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
         WSDConstants.RESERVABLE_MODULE_SELECTION_TYPE.container;
 
       // process each reservable unit, check availability and check against extra condition
-      //     gs.info(
-      //       "RC reservableGr details " +
-      //         reservableGr.getTableName() +
-      //         " " +
-      //         reservableGr.sys_id +
-      //         " " +
-      //         reservableGr.getEncodedQuery()
-      //     );
+      gs.info(
+        "RC reservableGr details " +
+          reservableGr.getRowCount() +
+          " " +
+          reservableGr.getTableName() +
+          " " +
+          reservableGr.sys_id +
+          " " +
+          reservableGr.getEncodedQuery()
+      );
       try {
         while (reservableGr.next()) {
           totalProcessed++;
@@ -398,7 +400,7 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
       .getPreference(WSDConstants.USER_PREFERENCE.lastSearchRequest);
     //gs.info("RC searchObjStr " + searchObjStr.toString());
     if (!searchObjStr || searchObjStr.length === 0)
-      searchObj = this.getFirstSearchConfig();
+      searchObj = this.getUserBuildingFromWorkplaceProfile();
     else searchObj = JSON.parse(searchObjStr);
 
     // if user has supplied a pre selected module via the url, overwrite this.
@@ -458,7 +460,28 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
 	- getUserArea
 
 	/* Get Current logged user Area from Workplace Profile*/
+  getUserBuildingFromWorkplaceProfile: function () {
+    var grBuilding = new GlideRecord("sn_wsd_core_workplace_profile");
+    var userBuilding = "";
+    grBuilding.addEncodedQuery("employee=" + gs.getUserID());
+    grBuilding.query();
+    if (grBuilding.next()) {
+      //gs.warn(gr.workplace_location.getRefRecord().getTableName());
+      if (
+        grBuilding.workplace_location.getRefRecord().getTableName() ==
+          "sn_wsd_core_space" ||
+        grBuilding.workplace_location.getRefRecord().getTableName() ==
+          "sn_wsd_core_area"
+      )
+        userBuilding = grBuilding.workplace_location.building.toString();
+    }
 
+    if (userBuilding)
+      return {
+        building: userBuilding,
+      };
+    else return {};
+  },
   getUserArea: function () {
     var grArea = new GlideRecord("sn_wsd_core_workplace_profile");
     var userArea = "";
@@ -540,7 +563,10 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
       );
 
       grCheckAvailability.query();
-
+      gs.info(
+        "RC in wsd search SI ; grCheckAvailability query is " +
+          grCheckAvailability.getEncodedQuery()
+      );
       if (grCheckAvailability.next()) {
         searchRequest.searchCriteria = newSearchCriteria;
         areaDefault = true;
