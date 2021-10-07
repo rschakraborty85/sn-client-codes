@@ -14,6 +14,350 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
   ],
   // RC - overriding for testing purposes
   SUPPORTED_GR_OPERATION: [">=", "=", "!=", "IN", "CONTAINS", "ISNOTEMPTY"],
+
+  /** RC - overridden to debug
+   * Search for available reservable unit based on search filter, reservable type (table & filter), start and end time
+   * @param {GlideDateTime} startGdt - start time in the internal GDT format YYYY-MM-DD HH:mm:ss
+   * @param {GlideDateTime} endGdt - end time in the internal GDT format YYYY-MM-DD HH:mm:ss
+   * @param {boolean} requireApproval - indicate whether the reservable requires an approval flow
+   * @param {string} reservableTable - target table name
+   * @param {string} [reservableFilter] - encoded query that is configured in the reservable module
+   * @param {string} [extraConditions] - extra encoded query that will be used to filter out reservable - should not overlap with the reservable filter
+   * @param {string[]} [reservableColumns] - columns of the reservable record, used as output properties
+   * @param {string} [reservableType] - the type of the reservable, to use when checking reservables.
+   * @param {string} [selectionType] - unit or container
+   * @param {string} [reservableContainerField] - field of the container within the reservable table (example: reservable table is Space, container field is area)
+   * @param {string} [reservableQuantityField] - name of the field to check for reservation capacity.
+   * @param {string} [reservationSysId] - existing reservation sys_id, used to see if trying to adjust meeting etc
+   * @param {string} [reservedReservableIds] - list of reserved sysIds (comma separated)
+   * @param {boolean} [includeUnavailableUnits] - include units that are unavailable
+   * @param {boolean} [includeReservationsWithinDays] - include all reservation of the unit from start of the day, till end of the day based on the given times
+   * @param {boolean} [includeStandardServices] - include standard services if applicable
+   * @param {boolean} [includeReservablePurposes] - include reservable purposes if applicable
+   * @param {number} [nextItemIndex] - the first row to include (indicates the first row index to start windowing) (0 on the first page)
+   * @param {number} [pageSize] - ammount of records to return
+   * @param {?string} [sortBy] - how to sort reservables (anything falsy will skip sorting)
+   * @param {boolean} [requireCostCenterDepartmentCheck] - Check to match space's Cost Center / Department with User's Cost Center / Department while search
+   * @return {ReservableSearchOutput} - search result including filter data and possible container data
+   */
+  searchForReservableUnits: function (
+    startGdt,
+    endGdt,
+    requireApproval,
+    reservableTable,
+    reservableFilter,
+    extraConditions,
+    reservableColumns,
+    reservableType,
+    selectionType,
+    reservableContainerField,
+    reservableQuantityField,
+    reservationSysId,
+    reservedReservableIds,
+    includeUnavailableUnits,
+    includeReservationsWithinDays,
+    includeStandardServices,
+    includeReservablePurposes,
+    nextItemIndex,
+    pageSize,
+    sortBy,
+    requireCostCenterDepartmentCheck
+  ) {
+    var reservableSearchOutput = {
+      hasMore: false,
+      reservableUnits: [],
+      reservableContainers: [],
+      nextItemIndex: -1,
+    };
+    var hasReservedReservables = !WSDUtils.nullOrEmpty(reservedReservableIds);
+    var hasNextItemIndex =
+      typeof nextItemIndex === "number" && !isNaN(nextItemIndex);
+    var searchLimit = this.getSearchLimit();
+
+    reservableColumns = WSDUtils.arrayHasElement(reservableColumns)
+      ? reservableColumns
+      : ["sys_id", "name"];
+
+    // get the reservables which are reserved first, and only if the call is for the first request (not on pagination, paginated calls will ignore reserved items)
+    if (!hasNextItemIndex && hasReservedReservables) {
+      var resolvedReservedItemsResult = this._fetchReservedUnitsOnSearch(
+        startGdt,
+        endGdt,
+        requireApproval,
+        reservableTable,
+        reservableFilter,
+        reservableColumns,
+        reservableType,
+        selectionType,
+        reservableContainerField,
+        reservableQuantityField,
+        reservationSysId,
+        reservedReservableIds,
+        includeReservationsWithinDays,
+        includeStandardServices,
+        includeReservablePurposes,
+        sortBy
+      );
+
+      reservableSearchOutput.reservableUnits =
+        resolvedReservedItemsResult.reservableUnits;
+      reservableSearchOutput.reservableContainers =
+        resolvedReservedItemsResult.reservableContainers;
+    }
+
+    /** ACTUAL SEARCH */
+    var reservableEQArr = [];
+    var parsedExtraConditions = this._resolveExtraConditionEncodedQuery(
+      extraConditions
+    );
+
+    if (!WSDUtils.nullOrEmpty(reservableFilter))
+      reservableEQArr.push(reservableFilter);
+
+    if (hasReservedReservables)
+      // add ignore included reserved reservables condition
+      reservableEQArr.push("sys_idNOT IN" + reservedReservableIds);
+
+    var reservableEQ = reservableEQArr.join("^").replace(/\^EQ/, "");
+
+    // get page size
+    if (typeof pageSize !== "number" || isNaN(pageSize))
+      pageSize = WSDUtils.getDefaultPageSize();
+
+    // verify nextItemIndex
+    var windowStart = 0;
+    if (hasNextItemIndex && nextItemIndex >= 0) windowStart = nextItemIndex;
+
+    var windowEnd = windowStart + searchLimit;
+
+    var reservableGr = new GlideRecord(reservableTable);
+    // when reservableEQ is empty or invalid, fall back to default
+    if (!WSDUtils.nullOrEmpty(reservableEQ))
+      reservableGr.addEncodedQuery(reservableEQ);
+
+    this._addApplicableReservableTableQuery(
+      reservableGr,
+      parsedExtraConditions
+    );
+
+    if (sortBy) {
+      var sortByField =
+        selectionType ===
+        WSDConstants.RESERVABLE_MODULE_SELECTION_TYPE.container
+          ? reservableContainerField
+          : this.DEFAULT_SORT_FIELD;
+      this._addSortQuery(sortBy, reservableGr, sortByField);
+    }
+
+    reservableGr.chooseWindow(windowStart, windowEnd);
+
+    // Assignment Type and Cost Center / Department queries
+    if (this._isSpaceMgmtApplicable(reservableType))
+      this._addSpaceMgmtQueries(
+        reservableGr,
+        parsedExtraConditions,
+        requireCostCenterDepartmentCheck
+      );
+
+    if (
+      selectionType ===
+        WSDConstants.RESERVABLE_MODULE_SELECTION_TYPE.container &&
+      reservableContainerField
+    )
+      reservableGr.addNotNullQuery(reservableContainerField);
+
+    reservableGr.query();
+
+    WSDLogger.debug(
+      "WSDSearchServiceSNC.searchForReservableUnits",
+      "Constructed (primary) query on search",
+      { table: reservableTable, encodedQuery: reservableGr.getEncodedQuery() }
+    );
+
+    gs.info(
+      "RC wsd search service ; in searchForReservableUnits function ; query using for searching reservable spaces is \n" +
+        reservableGr.getTableName() +
+        "\n" +
+        reservableGr.getRowCount() +
+        "\n" +
+        reservableGr.getEncodedQuery()
+    );
+
+    // adding one to check if there is more to request to load
+    var pageSizePlusOne =
+      pageSize - reservableSearchOutput.reservableUnits.length + 1;
+
+    // get the reservables
+
+    // so far didnt find anything which can be used for capacity
+    var resolvedItemsResult = this._resolveReservablesByGr(
+      reservableGr,
+      startGdt,
+      endGdt,
+      requireApproval,
+      pageSizePlusOne,
+      reservableColumns,
+      reservableType,
+      parsedExtraConditions,
+      reservationSysId,
+      includeUnavailableUnits,
+      includeReservationsWithinDays,
+      includeStandardServices,
+      includeReservablePurposes,
+      selectionType,
+      reservableContainerField,
+      reservableQuantityField,
+      reservableSearchOutput.reservableContainers
+    );
+    // @note negative test result object
+    gs.info(
+      "RC in searchForReservableUnites ; after calling resolveSomethingGR result is ; " +
+        JSON.stringify(resolvedItemsResult)
+    );
+    var allPossibleMatchedItems = reservableSearchOutput.reservableUnits.concat(
+      resolvedItemsResult.reservableUnits
+    );
+
+    // resolve and construct the applicable filter data that matches reservables result
+    reservableSearchOutput.filter = this._resolveAndConstructFilterData(
+      reservableType,
+      allPossibleMatchedItems
+    );
+    reservableSearchOutput.totalProcessed = resolvedItemsResult.totalProcessed;
+
+    reservableSearchOutput.reservableUnits = allPossibleMatchedItems.filter(
+      function (item) {
+        return item.includedInResult || item.is_reserved;
+      }
+    );
+
+    // resolve possible pagination data
+    reservableSearchOutput.hasMore =
+      reservableSearchOutput.reservableUnits.length >= pageSizePlusOne;
+    if (reservableSearchOutput.hasMore) {
+      reservableSearchOutput.reservableUnits.pop();
+      // nextItemIndex is subtracted by one the 'recordProcessedForResult' includes the index nextItemIndex is at.
+      var supposedStartIndex = windowStart - 1;
+      reservableSearchOutput.nextItemIndex =
+        supposedStartIndex + resolvedItemsResult.recordProcessedForResult;
+    }
+
+    return reservableSearchOutput;
+  },
+
+  /**
+   * problem is - there is no error validation being handled
+   * hence we cant build the output package without hardcoding the whole
+   */
+
+  /** RC - overriding search function for capacity
+   * search for available units, or containers based on search request and reservable module
+   * @param {SearchRequest} searchRequest - search request (from API)
+   * @param {ReservableModule} reservableModule - reservable module (fetched from reservable module service)
+   * @param {AlternateSearchOptions} alternateSearchOptions - used to override certain options of searchRequest or reservableModule
+   * @return {ReservableSearchOutput} - search result including filter data and possible container data
+   */
+  search: function (searchRequest, reservableModule, alternateSearchOptions) {
+    if (!alternateSearchOptions) alternateSearchOptions = {};
+
+    var userArea = this.getUserArea();
+
+    var areaDefault = false;
+
+    if (
+      searchRequest.searchCriteria.indexOf("area") == -1 &&
+      searchRequest.is_load &&
+      userArea
+    ) {
+      //gs.warn('@@6 searchCriteria comes here ' + userArea);
+
+      var newSearchCriteria =
+        searchRequest.searchCriteria + "^areaIN" + userArea;
+
+      var grCheckAvailability = new GlideRecord(
+        reservableModule.reservable_table
+      );
+
+      var reservableEQArr = [];
+      var parsedExtraConditions = this._resolveExtraConditionEncodedQuery(
+        newSearchCriteria
+      );
+
+      if (!WSDUtils.nullOrEmpty(reservableModule.reservable_filter))
+        reservableEQArr.push(reservableModule.reservable_filter);
+
+      if (!WSDUtils.nullOrEmpty(searchRequest.reserved_reservables))
+        // add ignore included reserved reservables condition
+        reservableEQArr.push(
+          "sys_idNOT IN" + searchRequest.reserved_reservables
+        );
+
+      var reservableEQ = reservableEQArr.join("^").replace(/\^EQ/, "");
+
+      // when reservableEQ is empty or invalid, fall back to default
+      if (!WSDUtils.nullOrEmpty(reservableEQ))
+        grCheckAvailability.addEncodedQuery(reservableEQ);
+
+      this._addApplicableReservableTableQuery(
+        grCheckAvailability,
+        parsedExtraConditions
+      );
+
+      grCheckAvailability.query();
+
+      if (grCheckAvailability.next()) {
+        searchRequest.searchCriteria = newSearchCriteria;
+        areaDefault = true;
+      }
+    }
+
+    var reservableSearchOutput = this.searchForReservableUnits(
+      searchRequest.startGdt,
+      searchRequest.endGdt,
+      reservableModule.require_approval,
+      reservableModule.reservable_table,
+      alternateSearchOptions.reservable_filter
+        ? alternateSearchOptions.reservable_filter
+        : reservableModule.reservable_filter,
+      searchRequest.searchCriteria,
+      reservableModule.reservable_columns,
+      reservableModule.reservable_type,
+      reservableModule.selection_type,
+      reservableModule.reservable_container_field,
+      reservableModule.reservable_quantity_field,
+      searchRequest.reservation_ids,
+      searchRequest.reserved_reservables,
+      searchRequest.include_unavailable_items,
+      searchRequest.include_reservations_within_days,
+      searchRequest.include_standard_services,
+      searchRequest.include_reservable_purposes,
+      searchRequest.next_item_index,
+      searchRequest.page_size,
+      searchRequest.sort_by,
+      reservableModule.require_cc_dept_check
+    );
+    // gs.info(
+    //   "RC WSDSearchService.search function ; params and output received \n" +
+    //     JSON.stringify(searchRequest) +
+    //     "\n" +
+    //     JSON.stringify(reservableModule) +
+    //     "\n" +
+    //     JSON.stringify(alternateSearchOptions) +
+    //     "\n" +
+    //     "OUTPUT " +
+    //     JSON.stringify(reservableSearchOutput)
+    // );
+    if (
+      reservableSearchOutput.filter &&
+      reservableSearchOutput.filter.areas &&
+      reservableSearchOutput.filter.areas.length == 1 &&
+      areaDefault
+    )
+      reservableSearchOutput.filter.areas[0].selected = true;
+
+    return reservableSearchOutput;
+  },
+
   /**
    * Not ideal logic but will work as of now - 24th aug 21
    * find module based on area select = true / false of building
@@ -21,7 +365,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
    * @returns {Object} building and reservable module
    */
   getReservableModuleAndBuilding: function (buildingID) {
-    //gs.info("RC function called");
     var AREA_TRUE = gs.getProperty(
       "sn_wsd_rsv.reservable_module.query.area_select_true"
     );
@@ -29,7 +372,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
       "sn_wsd_rsv.reservable_module.query.area_select_false"
     );
     var buildingModuleObj = this.getBuildingFromId(buildingID);
-    // gs.info("RC Building " + JSON.stringify(buildingModuleObj));
 
     var moduleGr = new GlideRecord(WSDConstants.TABLES.ReservableModule.name);
 
@@ -77,9 +419,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
     reservableGr,
     parsedExtraConditions
   ) {
-    // gs.info(
-    //   "RC parsedExtraConditions " + JSON.stringify(parsedExtraConditions)
-    // );
     if (!parsedExtraConditions) return;
 
     for (var j = 0; j < parsedExtraConditions.length; j++) {
@@ -93,8 +432,8 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
     }
   },
 
-  /**
-   * RC - override testing
+  /** RC - override for testing
+   *
    * For the glideRecord provided, process for available reservable units based on search filter, start and end time
    * @param {GlideRecord} reservableGr - GlideRecord to get reservables from
    * @param {GlideDateTime} startGdt - start time in the internal GDT format YYYY-MM-DD HH:mm:ss
@@ -158,16 +497,7 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
         WSDConstants.RESERVABLE_MODULE_SELECTION_TYPE.container;
 
       // process each reservable unit, check availability and check against extra condition
-      // gs.info(
-      //   "RC reservableGr details " +
-      //     reservableGr.getRowCount() +
-      //     " " +
-      //     reservableGr.getTableName() +
-      //     " " +
-      //     reservableGr.sys_id +
-      //     " " +
-      //     reservableGr.getEncodedQuery()
-      // );
+
       try {
         while (reservableGr.next()) {
           totalProcessed++;
@@ -285,9 +615,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
             // re-evaluate and check if the expected paginated result is completed
             if (includedInResultCount === count) resultCompleted = true;
 
-            //         gs.info(
-            //           "RC before pushing reservableUnit " + JSON.stringify(reservableUnit)
-            //         );
             reservableUnits.push(reservableUnit);
           }
         }
@@ -310,7 +637,7 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
   },
 
   /**
-   * RC Overrdding
+   * RC Overriding for testing
    * Gets the display values for the searchObj
    * @param {object} searchObj
    * @returns {InitSearchConfig}
@@ -319,7 +646,7 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
   _resolveSearchConfigData: function (searchObj) {
     try {
       if (!searchObj) return {};
-      //gs.info("RC searchObj " + JSON.stringify(searchObj));
+
       var searchObjWithDisplay = {};
       if (searchObj.building) {
         searchObjWithDisplay.building = this.getBuildingFromId(
@@ -347,7 +674,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
 
       if (searchObj.sortBy) searchObjWithDisplay.sortBy = searchObj.sortBy;
 
-      //gs.info("RC in WSDSearchService , json looks like " + JSON.stringify(searchObjWithDisplay));
       return searchObjWithDisplay;
     } catch (error) {
       gs.error("Error in _resolveSearchConfigData function " + error);
@@ -355,7 +681,7 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
   },
 
   /**
-   * RC - Overriding
+   * RC - Overriding for testing
    * Gets the display value and sysid of the building provided
    * @param {string} buildingId
    * @returns {object|null}
@@ -398,7 +724,7 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
     var searchObjStr = gs
       .getUser()
       .getPreference(WSDConstants.USER_PREFERENCE.lastSearchRequest);
-    //gs.info("RC searchObjStr " + searchObjStr.toString());
+
     if (!searchObjStr || searchObjStr.length === 0)
       searchObj = this.getUserBuildingFromWorkplaceProfile();
     else searchObj = JSON.parse(searchObjStr);
@@ -502,118 +828,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
     }
     return userArea;
   },
-  /**
-   * search for available units, or containers based on search request and reservable module
-   * @param {SearchRequest} searchRequest - search request (from API)
-   * @param {ReservableModule} reservableModule - reservable module (fetched from reservable module service)
-   * @param {AlternateSearchOptions} alternateSearchOptions - used to override certain options of searchRequest or reservableModule
-   * @return {ReservableSearchOutput} - search result including filter data and possible container data
-   */
-  search: function (searchRequest, reservableModule, alternateSearchOptions) {
-    if (!alternateSearchOptions) alternateSearchOptions = {};
-
-    /*
-		gs.warn('@@6 + inside search request1 ' + JSON.stringify(searchRequest));
-		gs.warn('@@6 + inside search request2 ' + JSON.stringify(reservableModule));
-		gs.warn('@@6 + inside search request3 ' + JSON.stringify(alternateSearchOptions));
-		gs.warn('@@6 searchCriteria ' + searchRequest.searchCriteria);
-		*/
-    gs.info(
-      "RC in search service " +
-        JSON.stringify(searchRequest) +
-        "\n" +
-        JSON.stringify(reservableModule)
-    );
-    var userArea = this.getUserArea();
-
-    var areaDefault = false;
-
-    if (
-      searchRequest.searchCriteria.indexOf("area") == -1 &&
-      searchRequest.is_load &&
-      userArea
-    ) {
-      //gs.warn('@@6 searchCriteria comes here ' + userArea);
-
-      var newSearchCriteria =
-        searchRequest.searchCriteria + "^areaIN" + userArea;
-
-      var grCheckAvailability = new GlideRecord(
-        reservableModule.reservable_table
-      );
-
-      var reservableEQArr = [];
-      var parsedExtraConditions = this._resolveExtraConditionEncodedQuery(
-        newSearchCriteria
-      );
-
-      if (!WSDUtils.nullOrEmpty(reservableModule.reservable_filter))
-        reservableEQArr.push(reservableModule.reservable_filter);
-
-      if (!WSDUtils.nullOrEmpty(searchRequest.reserved_reservables))
-        // add ignore included reserved reservables condition
-        reservableEQArr.push(
-          "sys_idNOT IN" + searchRequest.reserved_reservables
-        );
-
-      var reservableEQ = reservableEQArr.join("^").replace(/\^EQ/, "");
-
-      // when reservableEQ is empty or invalid, fall back to default
-      if (!WSDUtils.nullOrEmpty(reservableEQ))
-        grCheckAvailability.addEncodedQuery(reservableEQ);
-
-      this._addApplicableReservableTableQuery(
-        grCheckAvailability,
-        parsedExtraConditions
-      );
-
-      grCheckAvailability.query();
-      // gs.info(
-      //   "RC in wsd search SI ; grCheckAvailability query is " +
-      //     grCheckAvailability.getEncodedQuery()
-      // );
-      if (grCheckAvailability.next()) {
-        searchRequest.searchCriteria = newSearchCriteria;
-        areaDefault = true;
-      }
-    }
-
-    var reservableSearchOutput = this.searchForReservableUnits(
-      searchRequest.startGdt,
-      searchRequest.endGdt,
-      reservableModule.require_approval,
-      reservableModule.reservable_table,
-      alternateSearchOptions.reservable_filter
-        ? alternateSearchOptions.reservable_filter
-        : reservableModule.reservable_filter,
-      searchRequest.searchCriteria,
-      reservableModule.reservable_columns,
-      reservableModule.reservable_type,
-      reservableModule.selection_type,
-      reservableModule.reservable_container_field,
-      reservableModule.reservable_quantity_field,
-      searchRequest.reservation_ids,
-      searchRequest.reserved_reservables,
-      searchRequest.include_unavailable_items,
-      searchRequest.include_reservations_within_days,
-      searchRequest.include_standard_services,
-      searchRequest.include_reservable_purposes,
-      searchRequest.next_item_index,
-      searchRequest.page_size,
-      searchRequest.sort_by,
-      reservableModule.require_cc_dept_check
-    );
-
-    if (
-      reservableSearchOutput.filter &&
-      reservableSearchOutput.filter.areas &&
-      reservableSearchOutput.filter.areas.length == 1 &&
-      areaDefault
-    )
-      reservableSearchOutput.filter.areas[0].selected = true;
-
-    return reservableSearchOutput;
-  },
 
   /**
    * resolving filter data based on the reservable Units search result
@@ -658,7 +872,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
       )
         filter.floors.push(reservableUnit.floor);
 
-      //gs.info('@@6 : start reservable.area' + reservableUnit.area);
       // construct areas
       if (
         !WSDUtils.arrayContainsElement(
@@ -669,7 +882,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
       )
         filter.areas.push(reservableUnit.area);
 
-      //gs.info('@@6 : end reservable.area');
       // construct standard services
       filter.standard_services = this._resolveFilterData(
         reservableUnit,
@@ -737,8 +949,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
 
       if (!refRecord || !refRecord.isValidRecord()) return null;
 
-      //gs.info('@@6 ' + this.recordUtils.getReferenceObject(refRecord, 'area'));
-
       return {
         sys_id: reservableGr.getValue(reservableContainerField),
         display_value: reservableGr.getDisplayValue(reservableContainerField),
@@ -776,8 +986,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
       sortBy: sortBy,
     };
 
-    //gs.info('@@6 - save search ' + JSON.stringify(searchObj))
-
     var searchObjStr = JSON.stringify(searchObj);
     gs.getUser().savePreference(
       WSDConstants.USER_PREFERENCE.lastSearchRequest,
@@ -786,7 +994,6 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
   },
 
   getAreaIdsFromSearchQuery: function (searchQuery) {
-    //gs.info('@@6 start : searchQuery + ' + searchQuery);
     if (searchQuery && typeof searchQuery === "string") {
       var regex = /areaIN([a-zA-Z0-9,]*)/;
       var result = searchQuery.match(regex);

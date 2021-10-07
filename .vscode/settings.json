@@ -1,7 +1,10 @@
 {
     "cSpell.words": [
-        "gliderecord"
+        "Reservables",
+        "gliderecord",
+        "wsdsearchservice"
     ],
     "editor.wordWrap": "on",
-    "todo-tree.tree.showBadges": true
+    "todo-tree.tree.showBadges": true,
+    "inline-bookmarks.view.showVisibleFilesOnly": false
 }

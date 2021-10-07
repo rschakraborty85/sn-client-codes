@@ -1,0 +1,61 @@
+<div class="panel panel-default b" ng-if="c.data.user_selected">
+  <div class="panel-heading">
+    <h2 class="panel-title">{{c.options.title}}</h2>
+  </div>
+  <div class="panels-container list-group">
+    <div ng-if="c.data.count == 0" class="panel-body panels-container">
+      ${No reservations found for the user}
+    </div>
+    <div
+      class="list-group-item row"
+      ng-class="{'selected-row' : item.isSelected}"
+      ng-repeat="item in c.data.records | limitTo: c.data.lastLimit track by item.sys_id"
+      style="margin: 0px"
+      ng-click="c.markAsSelected(item, c.data.records)"
+    >
+      <div class="col-xs-2 padder-l-none padder-r-none main-column">
+        <div class="primary-display">{{::item.display_field}}</div>
+        <small class="text-muted">
+          <div class="secondary-display">
+            ${status_for }{{::item.secondary_display}}
+          </div>
+        </small>
+      </div>
+      <div class="col-xs-2 padder-l-none padder-r-none location-column">
+        <div class="location">
+          <span> {{::item.location}}</span>
+        </div>
+      </div>
+      <div class="col-xs-2 padder-l-none padder-r-none shift-column">
+        <div class="shift">
+          <span> {{::item.shift}}</span>
+        </div>
+      </div>
+      <div class="col-xs-3 padder-l-none padder-r-none duration-column">
+        <div class="duration">
+          <span> {{::item.start}} - {{::item.end}}</span>
+        </div>
+      </div>
+      <div class="col-xs-3 padder-l-none padder-r-none location-column">
+        <div class="user-status">
+          <span
+            class="label sc-field-error-label"
+            ng-class="{'cleared' : item.requirements_status.status, 'not-cleared' : !item.requirements_status.status}"
+          >
+            <i class="fa fa-circle"></i
+            >{{item.requirements_status.statusMessage}}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-12" ng-if="c.data.hasMore" style="padding: 15px">
+      <div class="text-a-c" ng-if="c.fetching">
+        <i class="fa fa-spinner fa-pulse fa-2x fa-fw"></i>
+        <span class="sr-only">${Loading...}</span>
+      </div>
+      <button class="btn btn-default btn-show-more" ng-click="c.loadMore()">
+        ${Show More}
+      </button>
+    </div>
+  </div>
+</div>

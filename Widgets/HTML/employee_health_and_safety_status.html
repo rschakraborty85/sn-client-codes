@@ -1,0 +1,162 @@
+<div class="panel panel-{{::options.color}} b">
+  <div class="panel-heading">
+    <h2 class="h4 panel-title">
+      <fa ng-if="::options.glyph.length" class="m-r-sm"></fa>{{data.title}}
+    </h2>
+  </div>
+  <div class="panel-body" class="invalid-url" ng-if="!data.validUrl">
+    <p class="strong">{{data.invalid_url_message}}</p>
+    <p>{{data.invalid_url_action_message}}</p>
+  </div>
+  <div class="panel-body" ng-if="data.validUrl">
+    <!-- employee picker for screeners -->
+    <div ng-if="data.isScreener">
+      <div class="user-type-container">
+        <div>
+          <input
+            ng-model="userStatus.userType"
+            type="radio"
+            id="employee"
+            name="type"
+            value="employee"
+          />
+          <label class="radio-button-label" for="employee">${Employee}</label
+          ><br />
+        </div>
+        <div class="visitor-radio-button">
+          <input
+            ng-model="userStatus.userType"
+            type="radio"
+            id="visitor"
+            name="type"
+            value="visitor"
+          />
+          <label class="radio-button-label" for="visitor">${Visitor}</label
+          ><br />
+        </div>
+      </div>
+      <div ng-if="userStatus.userType === 'employee' && !userStatus.isLoading">
+        <sn-record-picker
+          id="employee_picker"
+          field="userStatus.selUser"
+          table="'sys_user'"
+          display-field="'name'"
+          value-field="'sys_id'"
+          search-fields="'name'"
+          page-size="100"
+          default-query="'nameISNOTEMPTY^active=true'"
+        ></sn-record-picker>
+      </div>
+      <div ng-if="userStatus.userType === 'visitor' && !userStatus.isLoading">
+        <sn-record-picker
+          id="visitor_picker"
+          field="userStatus.selUser"
+          table="'sn_imt_core_visitor'"
+          display-field="'visitor_name'"
+          value-field="'sys_id'"
+          search-fields="'visitor_name'"
+          page-size="100"
+        ></sn-record-picker>
+      </div>
+      <div
+        class="user-type-message"
+        ng-if="!userStatus.baseData.isLoading && !userStatus.selId"
+      >
+        <p ng-if="userStatus.userType === 'employee'">
+          ${Please select an employee.}
+        </p>
+        <p ng-if="userStatus.userType === 'visitor'">
+          ${Please select a visitor.}
+        </p>
+      </div>
+    </div>
+
+    <!-- loading indicator for when user changes -->
+    <div
+      class="loading-indicator"
+      id="user_loading"
+      ng-if="userStatus.isLoading"
+    >
+      <p>${Loading...}</p>
+    </div>
+
+    <div
+      class="user-status-container"
+      ng-if="!userStatus.isLoading && userStatus.selId"
+    >
+      <!-- no entry in core user table -->
+      <div
+        class="user-not-found"
+        ng-if="userStatus.baseData.userFound && !userStatus.baseData.userExistsInCoreUserTable"
+      >
+        <p class="strong">${No Health and Safety user record found}</p>
+        <p>${Ask the workplace safety team to create a record.}</p>
+      </div>
+
+      <!-- display errors, will only occur if user is invalid if using url param -->
+      <div
+        class="user-not-found"
+        ng-if="!userStatus.baseData.userFound && data.isScreener"
+      >
+        <p>{{userStatus.baseData.user_error_message}}</p>
+      </div>
+
+      <!-- if user exists in core user table -->
+      <div
+        class="user-found"
+        ng-if="userStatus.baseData.userFound &amp;&amp; userStatus.baseData.userExistsInCoreUserTable"
+      >
+        <div class="user-info" ng-if="userStatus.userType === 'visitor'">
+          <h3>{{userStatus.baseData.user}}</h3>
+          <p>{{userStatus.baseData.userTitleLocation}}</p>
+        </div>
+        <div class="user-info" ng-if="userStatus.userType === 'employee'">
+          <sn-avatar
+            class="avatar-bigger"
+            primary="userStatus.baseData.userId"
+          ></sn-avatar>
+          <h3>{{userStatus.baseData.user}}</h3>
+          <p>{{userStatus.baseData.userTitleLocation}}</p>
+        </div>
+        <div class="user-status">
+          <span
+            class="label sc-field-error-label"
+            ng-class="{'cleared' : userStatus.baseData.cleared, 'not-cleared' : !userStatus.baseData.cleared}"
+          >
+            <i class="fa fa-circle"></i
+            >{{userStatus.baseData.cleared_message}}</span
+          >
+        </div>
+        <div class="safety-requirements">
+          <div
+            class="safety-requirement"
+            ng-repeat="req in userStatus.baseData.reqs| orderBy: 'requirement_cleared'"
+          >
+            <span>
+              <i
+                class="fa"
+                ng-class="{'fa-check' : req.requirement_cleared, 'fa-minus' : !req.requirement_cleared}"
+              ></i>
+              <span class="safety-requirement-name"
+                >{{req.requirement_name}}</span
+              >
+            </span>
+            <a
+              class="safety-requirement-action-name"
+              ng-if="req.requirement_action_name"
+              aria-label="{{req.requirement_action_name}}"
+              ng-href="{{userStatus.baseData.portalSuffix+req.requirement_action_url}}"
+            >
+              {{req.requirement_action_name}}
+            </a>
+            <span
+              class="safety-requirement-valid-for"
+              ng-if="req.requirement_valid_until"
+              >{{req.requirement_valid_until}}</span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

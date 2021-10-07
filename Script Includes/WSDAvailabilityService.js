@@ -109,6 +109,12 @@ WSDAvailabilityService.prototype = Object.extendsObject(
           //   );
         }
         try {
+          gs.info(
+            "RC in WSDAvailabilityService checkReservableAvailability function ; trying to get queried table details " +
+              reservationGr.getTableName() +
+              "\n" +
+              reservationGr.getEncodedQuery()
+          );
           while (reservationGr.next()) {
             var rsvSysId = reservationGr.getValue("sys_id");
             var blockerForId = reservationGr.getValue("blocker_for");

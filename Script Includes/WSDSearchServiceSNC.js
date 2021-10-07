@@ -230,6 +230,8 @@ WSDSearchServiceSNC.prototype = {
       { table: reservableTable, encodedQuery: reservableGr.getEncodedQuery() }
     );
 
+    
+
     // adding one to check if there is more to request to load
     var pageSizePlusOne =
       pageSize - reservableSearchOutput.reservableUnits.length + 1;
@@ -428,7 +430,7 @@ WSDSearchServiceSNC.prototype = {
     return conditionResult.length > 0 ? conditionResult : null;
   },
 
-  /**
+  /** 
    * parse a single string condition into an object with representative properties (based on supported operation)
    * @param {string} condition - condition as encodedQuery (example: building=xxxx; or: capacity>=5, or: standard_services=xxx,xxx)
    * @return {ParsedCondition} parsed condition
