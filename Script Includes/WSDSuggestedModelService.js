@@ -194,6 +194,7 @@ WSDSuggestedModelService.prototype = {
         return {
           error: true,
           error_msg: this.error_msg,
+          reservation_status: this._ifUserReservedForToday({}),
         };
       }
     } catch (error) {

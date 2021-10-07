@@ -158,16 +158,16 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
         WSDConstants.RESERVABLE_MODULE_SELECTION_TYPE.container;
 
       // process each reservable unit, check availability and check against extra condition
-      gs.info(
-        "RC reservableGr details " +
-          reservableGr.getRowCount() +
-          " " +
-          reservableGr.getTableName() +
-          " " +
-          reservableGr.sys_id +
-          " " +
-          reservableGr.getEncodedQuery()
-      );
+      // gs.info(
+      //   "RC reservableGr details " +
+      //     reservableGr.getRowCount() +
+      //     " " +
+      //     reservableGr.getTableName() +
+      //     " " +
+      //     reservableGr.sys_id +
+      //     " " +
+      //     reservableGr.getEncodedQuery()
+      // );
       try {
         while (reservableGr.next()) {
           totalProcessed++;
@@ -518,7 +518,12 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
 		gs.warn('@@6 + inside search request3 ' + JSON.stringify(alternateSearchOptions));
 		gs.warn('@@6 searchCriteria ' + searchRequest.searchCriteria);
 		*/
-
+    gs.info(
+      "RC in search service " +
+        JSON.stringify(searchRequest) +
+        "\n" +
+        JSON.stringify(reservableModule)
+    );
     var userArea = this.getUserArea();
 
     var areaDefault = false;
@@ -563,10 +568,10 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
       );
 
       grCheckAvailability.query();
-      gs.info(
-        "RC in wsd search SI ; grCheckAvailability query is " +
-          grCheckAvailability.getEncodedQuery()
-      );
+      // gs.info(
+      //   "RC in wsd search SI ; grCheckAvailability query is " +
+      //     grCheckAvailability.getEncodedQuery()
+      // );
       if (grCheckAvailability.next()) {
         searchRequest.searchCriteria = newSearchCriteria;
         areaDefault = true;

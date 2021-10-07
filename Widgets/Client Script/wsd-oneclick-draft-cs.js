@@ -90,12 +90,12 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
         // this is for today
         c.result = _parseResponse(respToday, "today");
         if (c.result.error) {
-          c.result = _callErrorHandler(respToday);
+          c.result = _callErrorHandler(respToday, "today");
         }
         // this is for tomorrow
         c.result2 = _parseResponse(respTomorrow, "tomorrow");
         if (c.result2.error) {
-          c.result2 = _callErrorHandler(respTomorrow);
+          c.result2 = _callErrorHandler(respTomorrow, "tomorrow");
         }
         // return c.result;
         //return c.result;
@@ -103,7 +103,7 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
       });
   }
 
-  function _callErrorHandler(response) {
+  function _callErrorHandler(response, when) {
     //
     var result = {};
     result.error = true;
@@ -112,6 +112,14 @@ api.controller = function (wsdUtils, wsdReservableSearch, $window) {
     result.seat_floor_label = searchObj.wsd_floor_label + "";
     result.seat_space_label = "";
     result.seat_space_sys_id = "";
+    if (when == "today") {
+      c.reservation_status = response.reservation_status.oc_reservation_status
+        ? response.reservation_status.oc_reservation_status.exist
+        : false;
+      c.reservation_status_text = c.reservation_status
+        ? "Completed"
+        : "Pending";
+    }
     return result;
   }
 
