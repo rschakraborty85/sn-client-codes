@@ -1,0 +1,112 @@
+<div ng-show="data.myView">
+  <div
+    class="container button-container"
+    style="text-align: center"
+    ng-if="c.data.mobile"
+  >
+  
+    <a
+      ng-if="c.data.myShiftReservList.length > 0 && c.data.isMobileShift"
+      class="btn"
+      ng-class="{'btn-primary' : data.hasBoth, 'add-fav-btn' : !data.hasBoth}"
+      data-toggle="tab"
+      ng-click="c.goToMyShifts()"
+      role="tab"
+      >${View My Shifts}</a
+    >
+    <a
+      ng-if="c.data.myReservationList.length > 0 && c.data.isMobileReservation"
+      class="btn"
+      ng-class="{'btn-primary' : data.hasBoth, 'add-fav-btn' : !data.hasBoth}"
+      data-toggle="tab"
+      ng-click="c.goToMyReservation()"
+      role="tab"
+      >${View My Reservations}</a
+    >
+  </div>
+
+  <div class="panel panel-default" ng-if="!c.data.mobile">
+    <div class="panel-heading headerBackgroundMobile">
+      <h2 class="h4 panel-title ng-binding">
+        ${Upcoming {{c.data.headerLabel}} Reservations}
+      </h2>
+    </div>
+    <br />
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th scope="col">${Location}</th>
+          <!--<th scope="col">${Space}</th>-->
+          <th scope="col">${Building}</th>
+          <th scope="col">${Floor}</th>
+          <th scope="col">${Space}</th>
+          <th scope="col">${Start Date}</th>
+          <th scope="col">${End Date}</th>
+          <th scope="col">${Action}</th>
+          <!--<th scope="col">{{c.data.headerLabel}}</th>-->
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-show="c.data.myShiftReservList.length == 0">
+          <td colspan="7" style="text-align: center"></td>
+          <!-- ${No records found} -->
+        </tr>
+        <tr ng-repeat="shift in c.data.myShiftReservList">
+          <td>{{shift.location}}</td>
+          <!--<td>{{reservation.space}}</td>-->
+          <td>{{shift.building}}</td>
+          <td>
+            {{shift.floor}} Floor
+            <a
+              ng-if="c.data.mappedin_enabled == 'false'"
+              href="{{shift.floor_link}}"
+              target="_blank"
+              ><img src="icon-location.jpg" class="icon-location"
+            /></a>
+          </td>
+          <td>&nbsp;</td>
+          <td>{{shift.start_time}}</td>
+          <td>{{shift.end_time}}</td>
+          <td>{{shift.shift}}</td>
+          <!--<td><a ng-if="reservation.state == 'Closed complete'" class="btn cancelReservation" 
+                                 ng-click="c.cancelReservation(reservation.sys_id)"
+                                 target="_blank">${Cancel Reservation}</a><span ng-if="reservation.state != 'Closed complete'">${In Progress}</span></td>-->
+        </tr>
+
+        <tr ng-show="c.data.myReservationList.length == 0">
+          <td colspan="7" style="text-align: center"></td>
+          <!-- ${No records found} -->
+        </tr>
+        <tr ng-repeat="reservation in c.data.myReservationList">
+          <td>{{reservation.location}}</td>
+          <!--<td>{{reservation.space}}</td>-->
+          <td>{{reservation.building}}</td>
+          <td>
+            {{reservation.floor}} ${Floor}
+            <a
+              ng-if="c.data.mappedin_enabled == 'false'"
+              href="{{reservation.floor_link}}"
+              target="_blank"
+              ><img src="icon-location.jpg" class="icon-location"
+            /></a>
+          </td>
+          <td>{{reservation.spaceName}}</td>
+          <td>{{reservation.start}}</td>
+          <td>{{reservation.end}}</td>
+          <td>
+            <a
+              ng-if="reservation.state == 'Closed complete'"
+              class="btn cancelReservation"
+              ng-click="c.cancelReservation(reservation.sys_id)"
+              target="_blank"
+              >${Cancel Reservation}</a
+            >
+            <span ng-if="reservation.state != 'Closed complete'"
+              >${In Progress}</span
+            >
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

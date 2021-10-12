@@ -60,11 +60,17 @@
   function getMyReservations() {
     var reservationRecords = [];
     var recordCount = 0;
-    var filter = "active=true^is_parent=true^end>=" + new GlideDateTime();
+    //var filter = "active=true^is_parent=true^end>=" + new GlideDateTime();
+    var filter = "active=true^end>=" + new GlideDateTime();
     var tableName = "sn_wsd_core_reservation";
+    // @note - filter returns is_parent which is failing the query
+    // @todo - check why
     filter = setUserContextAndFilterQuery(filter, "requested_for");
     if (data.user_selected) {
       var grReservation = getGlideRecord(tableName, filter, "start");
+      // console.log(
+      //   "RC grReservation rows " + grReservation.getRowCount() + "\n" + filter
+      // );
       while (grReservation.next()) {
         var location = grReservation.getValue("location");
         recordCount++;
@@ -159,7 +165,8 @@
       allRecords = allRecords.concat(travelRequests.records);
       allCount += travelRequests.recordCount;
     }
-    data.today = new GlideDate();
+    data.today = new GlideDate().getValue();
+    // console.log("RC UWR server " + data.today);
     data.records = allRecords;
     data.count = allCount;
     if (localInput && localInput.action == "fetch_more") {
@@ -172,6 +179,7 @@
     } else {
       data.hasMore = false;
     }
+    // console.log("RC UWR server " + JSON.stringify(data));
   }
 
   getMyReservationsAndTravelRequests();

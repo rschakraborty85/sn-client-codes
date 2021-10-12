@@ -1,16 +1,20 @@
 <div class="panel panel-{{::options.color}} b">
+  <!-- @note - title related -->
   <div class="panel-heading">
     <h2 class="h4 panel-title">
       <fa ng-if="::options.glyph.length" class="m-r-sm"></fa>{{data.title}}
     </h2>
   </div>
+  <!-- @note - validation message -->
   <div class="panel-body" class="invalid-url" ng-if="!data.validUrl">
     <p class="strong">{{data.invalid_url_message}}</p>
     <p>{{data.invalid_url_action_message}}</p>
   </div>
+
   <div class="panel-body" ng-if="data.validUrl">
-    <!-- employee picker for screeners -->
+    <!-- @note employee picker for screeners only -->
     <div ng-if="data.isScreener">
+      <!-- @note - radio button code -->
       <div class="user-type-container">
         <div>
           <input
@@ -35,6 +39,7 @@
           ><br />
         </div>
       </div>
+      <!-- @note - record picker for employee -->
       <div ng-if="userStatus.userType === 'employee' && !userStatus.isLoading">
         <sn-record-picker
           id="employee_picker"
@@ -47,6 +52,7 @@
           default-query="'nameISNOTEMPTY^active=true'"
         ></sn-record-picker>
       </div>
+      <!-- @note - record picker for visitor -->
       <div ng-if="userStatus.userType === 'visitor' && !userStatus.isLoading">
         <sn-record-picker
           id="visitor_picker"
@@ -58,6 +64,7 @@
           page-size="100"
         ></sn-record-picker>
       </div>
+      <!-- @note - validation message -->
       <div
         class="user-type-message"
         ng-if="!userStatus.baseData.isLoading && !userStatus.selId"
@@ -71,7 +78,7 @@
       </div>
     </div>
 
-    <!-- loading indicator for when user changes -->
+    <!-- @note loading indicator for when user changes -->
     <div
       class="loading-indicator"
       id="user_loading"
@@ -79,12 +86,12 @@
     >
       <p>${Loading...}</p>
     </div>
-
+    <!-- @note - data received from server code -->
     <div
       class="user-status-container"
       ng-if="!userStatus.isLoading && userStatus.selId"
     >
-      <!-- no entry in core user table -->
+      <!-- @note no entry in core user table -->
       <div
         class="user-not-found"
         ng-if="userStatus.baseData.userFound && !userStatus.baseData.userExistsInCoreUserTable"
@@ -93,7 +100,7 @@
         <p>${Ask the workplace safety team to create a record.}</p>
       </div>
 
-      <!-- display errors, will only occur if user is invalid if using url param -->
+      <!-- @note display errors, will only occur if user is invalid if using url param -->
       <div
         class="user-not-found"
         ng-if="!userStatus.baseData.userFound && data.isScreener"
@@ -101,15 +108,17 @@
         <p>{{userStatus.baseData.user_error_message}}</p>
       </div>
 
-      <!-- if user exists in core user table -->
+      <!-- @note if user exists in core user table -->
       <div
         class="user-found"
         ng-if="userStatus.baseData.userFound &amp;&amp; userStatus.baseData.userExistsInCoreUserTable"
       >
+        <!-- @note - for visitor -->
         <div class="user-info" ng-if="userStatus.userType === 'visitor'">
           <h3>{{userStatus.baseData.user}}</h3>
           <p>{{userStatus.baseData.userTitleLocation}}</p>
         </div>
+        <!-- @note - for employee ; here it shows user and title location -->
         <div class="user-info" ng-if="userStatus.userType === 'employee'">
           <sn-avatar
             class="avatar-bigger"
@@ -118,6 +127,7 @@
           <h3>{{userStatus.baseData.user}}</h3>
           <p>{{userStatus.baseData.userTitleLocation}}</p>
         </div>
+        <!-- @note - for employee user status message -->
         <div class="user-status">
           <span
             class="label sc-field-error-label"
@@ -132,6 +142,7 @@
             class="safety-requirement"
             ng-repeat="req in userStatus.baseData.reqs| orderBy: 'requirement_cleared'"
           >
+          <!-- @note - for employee ; shows requirement name-->
             <span>
               <i
                 class="fa"
@@ -141,6 +152,7 @@
                 >{{req.requirement_name}}</span
               >
             </span>
+            <!-- @note - for employee ; shows requirement action -->
             <a
               class="safety-requirement-action-name"
               ng-if="req.requirement_action_name"
@@ -149,6 +161,7 @@
             >
               {{req.requirement_action_name}}
             </a>
+            <!-- @note - for employee ; shows validity -->
             <span
               class="safety-requirement-valid-for"
               ng-if="req.requirement_valid_until"

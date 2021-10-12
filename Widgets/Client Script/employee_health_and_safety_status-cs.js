@@ -1,6 +1,7 @@
 api.controller = function ($rootScope, $scope, spUtil) {
   var c = this;
 
+  // @note binding object which makes get / set values of record picker
   $scope.userStatus = {
     userType: "employee",
     isLoading: false,
@@ -25,6 +26,7 @@ api.controller = function ($rootScope, $scope, spUtil) {
           _self.baseData = spresponse.data;
         });
     },
+    // @note - to reload new user data via server call
     selectUser: function (ID, name) {
       /*
 			if(this.selId == ID){
@@ -35,6 +37,7 @@ api.controller = function ($rootScope, $scope, spUtil) {
       this._connect(ID);
     },
   };
+  // @note - most important function - reloads the status message and requirement from bottom widget
   $rootScope.$on("onTravelOrReservationSelected", function (event, data) {
     if (!data.isSelected) {
       $scope.userStatus.selectUser($scope.userStatus.baseData.userId);
@@ -46,6 +49,7 @@ api.controller = function ($rootScope, $scope, spUtil) {
     $scope.userStatus.baseData.reqs =
       data.requirements_status.locationRequirements;
   });
+  // @note - triggers when the record picker changes
   $scope.$on("field.change", function (evt, parms) {
     if (parms && parms.field && !parms.field.value) {
       $scope.userStatus.isLoading = true;
@@ -69,6 +73,7 @@ api.controller = function ($rootScope, $scope, spUtil) {
       $scope.userStatus.selectUser(parms.field.value, parms.field.displayValue);
     }
   });
+  // @note - when the radio button changes
   scope.$watch("userStatus.userType", function (newValue, oldValue, scope) {
     if (newValue && newValue != oldValue) {
       scope.userStatus.isLoading = true;
