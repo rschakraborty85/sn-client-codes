@@ -153,7 +153,8 @@
       reservations = getMyReservations();
     }
     if (new GlidePluginManager().isActive("com.sn_imt_travel")) {
-      travelRequests = getMyTravelRequests();
+      // travelRequests = getMyTravelRequests();
+      travelRequests = null;
     }
     var allRecords = [];
     var allCount = 0;

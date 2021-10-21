@@ -16,13 +16,13 @@ api.controller = function ($rootScope) {
   };
 
   function isReservationOrTravelRequestForToday() {
-    console.log(
-      "RC function isReservationOrTravelRequestForToday data is\n" +
-        // JSON.stringify(c.data.records)
-        // +
-        // "\n" +
-        JSON.stringify(c.data)
-    );
+    // console.log(
+    //   "RC function isReservationOrTravelRequestForToday data is\n" +
+    //     // JSON.stringify(c.data.records)
+    //     // +
+    //     // "\n" +
+    //     JSON.stringify(c.data)
+    // );
     var todayRequests = c.data.records.filter(function (req) {
       //   console.log("RC today " + req.start + "\t" + c.data.today);
       return req.start == c.data.today;
@@ -35,6 +35,7 @@ api.controller = function ($rootScope) {
 
   function maybeUnselectRow(items, clickedItemSysId) {
     var selected = items.filter(function (item) {
+      // @note - get selected row
       return item.isSelected;
     });
     if (
@@ -42,8 +43,12 @@ api.controller = function ($rootScope) {
       selected.length > 0 &&
       selected[0].sys_id === clickedItemSysId
     ) {
+      // @note when you select / unselect same row
+      // $rootScope.$broadcast("onTravelOrReservationSelected", "");
       return;
     } else if (selected && selected.length > 0) {
+      // @note when you select another row
+
       selected[0].isSelected = false;
     }
   }
@@ -52,6 +57,7 @@ api.controller = function ($rootScope) {
     // console.log("did i call mark as selected on selection of employee");
     maybeUnselectRow(items, item.sys_id);
     item.isSelected = !item.isSelected;
+    //console.log("RC item is " + JSON.stringify(item));
     $rootScope.$broadcast("onTravelOrReservationSelected", item);
   };
 

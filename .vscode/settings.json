@@ -6,5 +6,6 @@
     ],
     "editor.wordWrap": "on",
     "todo-tree.tree.showBadges": true,
-    "inline-bookmarks.view.showVisibleFilesOnly": false
+    "inline-bookmarks.view.showVisibleFilesOnly": false,
+    "inline-bookmarks.default.words.red": "@audit[ \\t\\n$], @debug[ \\t\\n$],"
 }

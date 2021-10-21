@@ -48,7 +48,7 @@
   data.printer_display_default = visitorData.printer_display_default;
   data.printer_sys_id_default = visitorData.printer_sys_id_default;
 
-  // RC - end of change
+  // RC - end of change 
 
   var userSysId = $sp.getParameter("user");
   var visitorSysId = $sp.getParameter("visitor"); //RC check if visitor id is in url
@@ -72,7 +72,7 @@
   data.invalid_url_action_message = gs.getMessage(
     "Contact your admin for more info."
   );
-  // RC - visitor 2nd phase ; STRY2443341
+  // RC - visitor 2nd phase ; STRY2443341 
   data.wsd_default_printer = null;
   var wsdVisitorUtil = new sn_wsd_visitor.WVM_VisitorUiUtils();
   //     data.wsd_default_printer = wsdVisitorUtil.getDefaultPrinterForLoggedInUser();

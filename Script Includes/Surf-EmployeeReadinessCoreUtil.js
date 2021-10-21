@@ -223,10 +223,17 @@ EmployeeReadinessCoreUtil.prototype = {
       };
       reqs.push(req);
     }
+    gs.error(this.STATIC_LOGGER);
     return reqs;
   },
+  STATIC_LOGGER: "",
   // @audit how to make valid until work for present and future
   getValidUntil: function (healthAndSafetyUserToRequirementGr) {
+    this.STATIC_LOGGER +=
+      "LOGGING getValidUntil " +
+      "\t" +
+      healthAndSafetyUserToRequirementGr.getUniqueValue();
+    this.STATIC_LOGGER += "\n";
     var EMPLOYEE_HEALTH_VERIFICATION = "de3151dac1111010fa9b0669111834d0";
     var userId =
       healthAndSafetyUserToRequirementGr.getElement(
@@ -253,15 +260,25 @@ EmployeeReadinessCoreUtil.prototype = {
 
       if (verificationGr.next()) {
         var attestationDate = verificationGr.getValue("attestation_date");
+        this.STATIC_LOGGER +=
+          "RC getValidUntil function attestationDate " + attestationDate;
+        this.STATIC_LOGGER += "\n";
         if (attestationDate) {
           var expiration = new sn_imt_monitoring.HealthVerificationUtil().getExpiration(
             verificationGr
           );
+          this.STATIC_LOGGER +=
+            "RC getValidUntil function expiration " + expiration;
+          this.STATIC_LOGGER += "\n";
           if (!expiration) {
             var attestationDateTime = new GlideDateTime(attestationDate);
             attestationDateTime.add(
               new GlideDateTime(validFor).getNumericValue()
             );
+            this.STATIC_LOGGER +=
+              "RC getValidUntil function inside expiration " +
+              attestationDateTime;
+            this.STATIC_LOGGER += "\n";
             return attestationDateTime;
           }
 
@@ -271,7 +288,9 @@ EmployeeReadinessCoreUtil.prototype = {
             // in past
             triggerGdt.addDaysUTC(1);
           }
-
+          this.STATIC_LOGGER +=
+            "RC getValidUntil function outside expiration " + triggerGdt;
+          this.STATIC_LOGGER += "\n";
           return triggerGdt;
         }
       }

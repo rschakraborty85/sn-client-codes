@@ -1,6 +1,5 @@
 <!-- employee_health_and_safety_status -->
 <div class="panel panel-{{::options.color}} b">
-  <!-- @note - mostly panel header - below div -->
   <div class="panel-heading headerBackgroundMobile">
     <h2 class="h4 panel-title" ng-if="!c.data.mobile">
       <fa ng-if="::options.glyph.length" class="m-r-sm"></fa
@@ -13,7 +12,6 @@
       status')}}
     </h2>
   </div>
-  <!-- @note - error handling - below div -->
   <div class="panel-body" class="invalid-url" ng-if="!data.validUrl">
     <p class="strong">{{data.invalid_url_message}}</p>
     <p>{{data.invalid_url_action_message}}</p>
@@ -21,7 +19,6 @@
   <div class="panel-body" ng-if="data.validUrl">
     <!-- employee picker for screeners -->
     <div ng-if="data.isScreener">
-      <!-- @note - screener view and non mobile ; for binding radio buttons - below div -->
       <div
         ng-if="data.view=='screener' && !c.data.mobile"
         class="user-type-container"
@@ -49,7 +46,6 @@
           ><br />
         </div>
       </div>
-      <!-- @note - for employee selection ;  - below div -->
       <div ng-if="userStatus.userType === 'employee' && !userStatus.isLoading">
         <h2
           ng-if="data.view=='screener' && !c.data.mobile"
@@ -62,7 +58,6 @@
           </label>
         </h2>
         <!-- STRY2342405 :: modified display-field and search-fields-->
-        <!-- @note - for qrscan specific - below div -->
         <div ng-if="c.qrScan">
           <sn-record-picker
             id="employee_picker"
@@ -76,7 +71,6 @@
             default-query="'user_nameISNOTEMPTY^active=true^emailENDSWITH@servicenow.com'"
           ></sn-record-picker>
         </div>
-        <!-- @note - this is for employee ; if not qr code ; show record picker ;  - below div -->
         <div ng-if="!c.qrScan && !data.mobile">
           <!--himanshu-->
           <!-- STRY2342405 :: sn-disabled="!c.qrScan"-->
@@ -92,7 +86,6 @@
           ></sn-record-picker>
         </div>
       </div>
-      <!-- @note - for visitor specific code - below div -->
       <div
         ng-if="(userStatus.userType === 'visitor' || c.data.mobile) && !userStatus.isLoading && data.view=='screener'"
       >
@@ -109,21 +102,7 @@
             aria-label="Mandatory "
             aria-hidden="false"
           ></span>
-          <!-- RC , removed default query default-query="data.printer_query" -->
-          <!-- RC - visitor 2nd phase ; STRY2443341 ; turning off below picker-->
-          <!-- <sn-record-picker
-  aria-label="Select Printer"
-  id="printer_location_picker"
-  field="visitor_printer_location"
-  table="'u_visitor_config'"
-  default-query="'u_location.nameNOT LIKEinactive'"
-  display-field="'u_location_display_name'"
-  value-field="'sys_id'"
-  search-fields="'u_location_display_name'"
-  page-size="100"
-  ></sn-record-picker> -->
 
-          <!-- RC - visitor 2nd phase ; STRY2443341 ; new picker - wsd -->
           <sn-record-picker
             id="wsd_visitor_printer_picker"
             field="wsd_visitor_printer_picker"
@@ -158,7 +137,7 @@
           page-size="100"
         ></sn-record-picker>
       </div>
-      <!-- @note RC - added canvas to print visitor badge -->
+      <!-- RC - added canvas to print visitor badge -->
       <div ng-hide="true">
         <canvas
           class="hidden_canvas_badge_print"
@@ -166,7 +145,6 @@
           height="215"
         ></canvas>
       </div>
-      <!-- @note basic messaging div -->
       <div
         class="user-type-message"
         ng-if="!userStatus.baseData.isLoading && !userStatus.selId"
@@ -180,7 +158,7 @@
       </div>
     </div>
 
-    <!-- @note loading indicator for when user changes -->
+    <!-- loading indicator for when user changes -->
     <div
       class="loading-indicator"
       id="user_loading"
@@ -188,12 +166,12 @@
     >
       <p>${Loading...}</p>
     </div>
-    <!-- @note when server call returns data , and its not loading anymore -->
+
     <div
       class="user-status-container"
       ng-if="!userStatus.isLoading && userStatus.selId"
     >
-      <!-- @note no entry in core user table -->
+      <!-- no entry in core user table -->
       <div
         class="user-not-found"
         ng-if="userStatus.baseData.userFound && !userStatus.baseData.userExistsInCoreUserTable"
@@ -202,7 +180,7 @@
         <p>${Ask the workplace safety team to create a record.}</p>
       </div>
 
-      <!-- @note display errors, will only occur if user is invalid if using url param -->
+      <!-- display errors, will only occur if user is invalid if using url param -->
       <div
         class="user-not-found"
         ng-if="!userStatus.baseData.userFound && data.isScreener"
@@ -210,7 +188,7 @@
         <p>{{userStatus.baseData.user_error_message}}</p>
       </div>
 
-      <!-- @note for visitor ; RC - visitor 2nd phase ; STRY2443341 -->
+      <!-- RC - visitor 2nd phase ; STRY2443341 -->
       <div
         ng-if="userStatus.userType === 'visitor' &amp;&amp; !c.data.isEhsRequired"
         style="text-align: center"
@@ -250,17 +228,15 @@
         </button>
       </div>
 
-      <!-- @note if user exists in core user table -->
+      <!-- if user exists in core user table -->
       <div
         class="user-found"
         ng-if="userStatus.baseData.userFound &amp;&amp; userStatus.baseData.userExistsInCoreUserTable"
       >
-        <!-- @note for visitor - ignore for now -->
         <div class="user-info" ng-if="userStatus.userType === 'visitor'">
           <h3>{{userStatus.baseData.user}}</h3>
           <p>{{userStatus.baseData.userTitleLocation}}</p>
         </div>
-        <!-- @note for employee ; IMP -->
         <div class="user-info" ng-if="userStatus.userType === 'employee'">
           <sn-avatar
             class="avatar-bigger"
@@ -268,6 +244,7 @@
           ></sn-avatar>
           <h3>{{userStatus.baseData.user}}</h3>
           <p>{{userStatus.baseData.userTitleLocation}}</p>
+          <!-- @note RC - added part of STRY2462904 -->
           <p>{{userStatus.baseData.user_display_field}}</p>
         </div>
         <div class="user-status">
@@ -279,7 +256,6 @@
             >{{userStatus.baseData.cleared_message}}</span
           >
         </div>
-        <!-- @note below div is most important for location based requirement purposes -->
         <div class="safety-requirements">
           <div
             class="safety-requirement"
@@ -289,8 +265,11 @@
               class="fa"
               ng-class="{'fa-check' : req.requirement_cleared, 'fa-minus' : !req.requirement_cleared}"
             ></i>
-            <span class="safety-requirement-name">{{req.requirement_name}}</span
-            >&nbsp;&nbsp;
+            <span
+              class="safety-requirement-name"
+              ng-class="{'safe-req-min-width-60': c.data.mobile || (req.requirement_valid_until && (data.vaccineRequirementId != req.requirement_id || data.view=='self')) }"
+              >{{req.requirement_name}}&nbsp;&nbsp;</span
+            >
             <a
               class="safety-requirement-action-name"
               ng-if="req.requirement_action_name && !c.data.mobile && userStatus.baseData.userId == c.data.loggedInUser && !req.requirement_valid_until"
@@ -311,8 +290,8 @@
               {{req.requirement_action_name}}
             </a>
             <span
-              class="safety-requirement-valid-for"
-              ng-if="req.requirement_valid_until"
+              class="safety-requirement-valid-for safe-req-min-width-60"
+              ng-if="req.requirement_valid_until && (c.data.mobile || data.vaccineRequirementId != req.requirement_id || data.view=='self') "
               >{{req.requirement_valid_until}}</span
             >
           </div>
@@ -321,12 +300,11 @@
             ng-if="data.vaccineReqExists"
           >
             ${If vaccination/COVID-19 testing requirement shows as not cleared,
-            be prepared to bring proof of vaccination or your negative test
-            results.}
+            be prepared to show proof of your negative test result.}
           </div>
         </div>
 
-        <!-- @note RC , visitor badge print -->
+        <!-- RC , visitor badge print -->
         <div
           style="text-align: center"
           ng-if="userStatus.userType === 'visitor'"
@@ -359,7 +337,6 @@
           </button>
         </div>
         <br />
-        <!-- @note - for employee ; custom buttons shows on page -->
         <div
           style="text-align: center"
           ng-if="userStatus.userType === 'employee'"
