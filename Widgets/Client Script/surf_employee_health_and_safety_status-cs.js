@@ -1,6 +1,7 @@
 api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
   var c = this;
-
+  // @note - RC part of STRY2462904
+  c.viaEvent = false;
   //STRY2461815 - Vacccine Changes
   //Start
   $scope.showVaccineReport = c.data.showVaccineReport;
@@ -27,27 +28,36 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
     initialUserType = c.data.userType;
     c.visitorInUrl = true;
   }
-  // @note - most important function - reloads the status message and requirement from bottom widget
+  // @note - RC part of STRY2462904
+  // most important function - reloads the status message and requirement from bottom widget
   $rootScope.$on("onTravelOrReservationSelected", function (event, data) {
     $timeout(function () {
-      console.log(
-        "RC in EHSS widget ; rootscope.on onTravelOrReservationSelected \n" +
-          // JSON.stringify(event) +
-          // "\n" +
-          JSON.stringify(data)
-      );
+      // console.log(
+      //   //   "RC data is " + JSON.stringify(data)
+      //   "RC data.isSelected " + data.isSelected + "\t" + data.display_field
+      // );
       if (!data.isSelected) {
+        // @note RC - added an extra boolean to denote this selectUser function call is via event
+        // this helps when screener unselects a reservation row
+        // it load the base user location record back again instead of reservation based health requirements
+        c.viaEvent = true;
         $scope.userStatus.selectUser($scope.userStatus.baseData.userId);
+        $scope.userStatus.baseData.user_display_field = "";
         return;
       }
-      // RC - for testing only
-      $scope.userStatus.baseData.user_display_field = data.display_field;
+      // @note - RC show additional data about reservation
+      $scope.userStatus.baseData.user_display_field =
+        "Reservation Selected : " +
+        data.display_field +
+        " - " +
+        data.secondary_location;
       $scope.userStatus.baseData.cleared = data.requirements_status.status;
       $scope.userStatus.baseData.cleared_message =
         data.requirements_status.statusMessage;
       $scope.userStatus.baseData.reqs =
         data.requirements_status.locationRequirements;
-    }, 1000);
+      $scope.userStatus.baseData.user_ppe_msg = data.ppe_message;
+    }, 500);
   });
   //   RC - set defaults , printer
   $scope.visitor_printer_location = {
@@ -69,22 +79,13 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
     value: "",
     name: "wsd_visitor_registration_picker",
   };
-  // RC - visitor 2nd phase ; STRY2443341
-  c.wsdPrinterPickerChanged = function () {
-    //
-  };
-  // RC - visitor 2nd phase ; STRY2443341
-  c.wsdVisitorPickerChanged = function () {
-    //
-  };
+
   // RC - visitor 2nd phase ; STRY2443341
   c.wsdRedirectToRegistration = function () {
     var sys_id = $scope.userStatus.selUser.value;
     $window.open(
       "/sn_wsd_visitor_visitor_registration.do?sysparm_query=sys_id=" + sys_id,
-      //   "?id=form&sys_id=" +
-      //     sys_id +
-      //     "&table=sn_wsd_visitor_visitor_registration&view=badge_print",
+
       "_blank"
     );
   };
@@ -144,9 +145,11 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
           }
         });
     },
+    // @note refer onTravelOrReservationSelected event handler to understand ifViaEvent param
     selectUser: function (ID, name, printer_config_id, printer_changed) {
       //isPrinter
-      if (this.selId == ID) {
+      // console.log("RC selectUser " + this.selId + "\t" + ID);
+      if (this.selId == ID && !c.viaEvent) {
         return true;
       }
       this.selId = ID;
@@ -384,13 +387,6 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
         parms.field.value &&
         parms.field.value != parms.oldValue
       ) {
-        // @note handled in upcoming workplace reservation widget - displayed at bottom of the page
-        // console.log(
-        //   "RC - within scope.on ; " +
-        //     $scope.userStatus.userType +
-        //     "\n" +
-        //     parms.field.value
-        // );
         $rootScope.$broadcast("getReservations", {
           user_type: $scope.userStatus.userType,
           user: parms.field.value,
@@ -403,7 +399,7 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
             true
           );
         }
-        // @note RC - visitor 2nd phase ; STRY2443341
+        // RC - visitor 2nd phase ; STRY2443341
         else if (parms.field.name == "wsd_visitor_printer_picker") {
           c.server
             .get({
@@ -486,10 +482,4 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
   $scope.closeModal = function () {
     c.modalInstance.close();
   };
-  //End
-  //   c.focusElement = function () {
-  //     //$('employee_picker').focus();
-  //     document.getElementById("assignppe").focus();
-  //   };
-  //$('employee_picker').focus();
 };

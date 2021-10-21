@@ -1,164 +1,210 @@
 (function () {
-	// checck if mobile
-	data.mobile = gs.isMobile();
-	data.mappedin_enabled = gs.getProperty('mappedin.enabled');
+  var view = $sp.getParameter("view");
+  var localInput = input; //to safeguard pollution of 'input' via BR or other scripts
+  data.user_selected = false;
+  var limit = options.items_per_page ? options.items_per_page : 10;
+  var util = new EmployeeReadinessCoreUtil();
 
-	var view = $sp.getParameter("view");
-	var localInput = input; //to safeguard pollution of 'input' via BR or other scripts
-	data.user_selected = false;
-	data.myView = (view == 'self')?true:false;
+  // @note - RC - added new function
+  // assumption - it will always return one msg per call
+  function getApplicablePpeMsgs(user, location) {
+    var msg = new sn_imt_core.CustomRTORequirementsUtil().getReqResult(
+      user,
+      "ppe_message",
+      location
+    );
+    if (msg) return msg;
+    return "";
+  }
 
-	// get shift details
-	var shiftReserv = new sn_imt_core.ShiftReservationUtil();
-	data.myShiftReservList = shiftReserv.getMyShiftDetails(gs.getUserID());
-	data.hasShift = data.myShiftReservList.length > 0 ? true : false;
+  function setUserContextAndFilterQuery(filter, queryParam) {
+    if (!localInput && view == "self") {
+      filter = filter + "^" + queryParam + "=" + gs.getUserID();
+      data.user = gs.getUserID();
+      data.user_type = "employee";
+      data.user_selected = true;
+      data.lastLimit = 0;
+    }
+    if (localInput && localInput.user && localInput.user_type == "employee") {
+      filter = filter + "^" + queryParam + "=" + localInput.user;
+      data.user = localInput.user;
+      data.user_type = "employee";
+      data.user_selected = true;
+      data.lastLimit = 0;
+    }
+    if (
+      localInput &&
+      (localInput.user == "" || localInput.user_type == "visitor")
+    ) {
+      data.user = "";
+      data.user_type = "";
+      data.user_selected = false;
+    }
+    return filter;
+  }
 
-	// get reservation details
-	var utilReserv = new sn_imt_core.selfReservationUtil();
-	data.myReservationList = utilReserv.getMySelfReservationDetail();
-	data.hasReserve = data.myReservationList.length > 0 ? true : false;
+  function findHealthAndSafetyUser(user) {
+    var healthAndSafetyGr = new GlideRecord(
+      "sn_imt_core_health_and_safety_user"
+    );
+    healthAndSafetyGr.addQuery("user", user);
+    healthAndSafetyGr.query();
+    healthAndSafetyGr.setLimit(1);
+    healthAndSafetyGr.next();
+    return healthAndSafetyGr.getUniqueValue();
+  }
 
-	if (data.hasShift && data.hasReserve) {
-		data.hasBoth = true;
-		data.headerLabel = "Shift/Workspace";
-	} else if (data.hasShift) data.headerLabel = "Shift";
-	else if (data.hasReserve) data.headerLabel = "Workspace";
+  function validateRequirementStatusForLocation(location, userId) {
+    var locationRequirementStatus = util.getUnqualifiedReqResults(
+      findHealthAndSafetyUser(userId),
+      location
+    );
+    // console.log(
+    //   "RC server validateRequirementStatusForLocation \t" +
+    //     location +
+    //     "\t" +
+    //     userId +
+    //     "\n" +
+    //     JSON.stringify(locationRequirementStatus)
+    // );
+    var status = locationRequirementStatus.every(function (req) {
+      return req.requirement_cleared;
+    });
+    return {
+      status: status,
+      statusMessage: util.getStatusMessage(status),
+      locationRequirements: locationRequirementStatus,
+    };
+  }
 
-	// for cancelling reservation ̰
-	if (input && input.action == "myreservation") {
-		if (IsEnabledSelfReserve()) {
-			if (input && input.cancelRequest) {
-				var wprId = input.cancelRequest;
-				var wpr_gr = new sn_wsd_core.selfReserveUtil_WSM();
-				wpr_gr.cancelWPRRequest(wprId);
-				wpr_gr.checkAndCancelSelfReservation(wprId);
-			}
-			data.myReservationList = utilReserv.getMySelfReservationDetail();
-		}
-	}
-
-	function IsEnabledSelfReserve() {
-		var bReturnFlag = false;
-
-		if (gs.hasRole("sn_wsd_core.workplace_user")) bReturnFlag = true;
-		return bReturnFlag;
-	}
-
-	if(data.mobile){
-		data.isMobileShift = false;
-		var rto_shift = gs.getProperty(sn_wsd_core.WSMConstants.RTO_SHIFT_USERS_GROUP_SYS_ID_PROPERTY);
-		if(gs.getUser().isMemberOf(rto_shift)){
-			data.isMobileShift = true;
-		}
-		
-		data.isMobileReservation = false;
-		var rto_reservation = gs.getProperty('sn_imt_checkin.rto.self.reserve.users.group.sys_id');
-		if(gs.getUser().isMemberOf(rto_reservation)){
-			data.isMobileReservation = true;
-		}
-	}
-	//mobile
-	if (input && input.action == 'goToMyReservation'){
-		var goToMyReservationAppletID = global.NowMobileConfig.RTO_MY_RESERVATIONS;
-		var link = '';
-
-		var deepLinkGenerator = new global.MobileDeepLinkGenerator("request");
-		link = deepLinkGenerator.getScreenLink(goToMyReservationAppletID, '');
-
-		data.mobile_link = link;
-		return;
-	}
-
-	if (input && input.action == 'goToMyShifts'){
-		var goToMyShiftsAppletID = global.NowMobileConfig.RTO_MY_SHIFTS;
-		var link1 = '';
-
-		var deepLinkGenerator1 = new global.MobileDeepLinkGenerator("request");
-		link1 = deepLinkGenerator1.getScreenLink(goToMyShiftsAppletID, '');
-
-		data.mobile_link = link1;
-		return;
-	}
-
-
-	/*
-      function getMyReservationSysIds() {
-          var ids = [];
-          var filter = 'active=true^is_parent=true^start>=' + new GlideDateTime();
-          var tableName = 'sn_wsd_core_reservation';
-          if (!localInput && view == 'self') {
-              filter = filter + '^requested_for=' + gs.getUserID();
-              data.user = gs.getUserID();
-              data.user_type = 'employee';
-              data.user_selected = true;
-              data.lastLimit = 0;
-          }
-          if (localInput && localInput.user && localInput.user_type == 'employee') {
-              filter = filter + '^requested_for=' + localInput.user;
-              data.user = localInput.user;
-              data.user_type = 'employee';
-              data.user_selected = true;
-              data.lastLimit = 0;
-          }
-          if (localInput && (localInput.user == '' || localInput.user_type == 'visitor')) {
-              data.user = '';
-              data.user_type = '';
-              data.user_selected = false;
-          }
+  function getMyReservations() {
+    var reservationRecords = [];
+    var recordCount = 0;
+    //var filter = "active=true^is_parent=true^end>=" + new GlideDateTime();
+    var filter = "active=true^end>=" + new GlideDateTime();
+    var tableName = "sn_wsd_core_reservation";
+    // @note - filter returns is_parent which is failing the query
+    // @todo - check why
+    filter = setUserContextAndFilterQuery(filter, "requested_for");
+    if (data.user_selected) {
+      var grReservation = getGlideRecord(tableName, filter, "start");
+      // console.log(
+      //   "RC grReservation rows " + grReservation.getRowCount() + "\n" + filter
+      // );
+      while (grReservation.next()) {
+        var location = grReservation.getValue("location");
+        recordCount++;
+        reservationRecords.push({
+          sys_id: grReservation.getValue("sys_id"),
+          display_field: grReservation.getValue("number"),
+          secondary_display: grReservation.getDisplayValue("requested_for"),
+          shift: grReservation.getDisplayValue("shift"),
+          location: grReservation.getDisplayValue("location"),
+          secondary_location: grReservation.getDisplayValue(
+            "u_cmn_location_ref"
+          ),
+          start: new GlideDateTime(grReservation.getValue("start"))
+            // .getDate()
+            .getDisplayValue(),
+          end: new GlideDateTime(grReservation.getValue("end"))
+            // .getDate()
+            .getDisplayValue(),
+          present: grReservation.getValue("start") <= new GlideDateTime(),
+          requirements_status: validateRequirementStatusForLocation(
+            location,
+            data.user
+          ),
+          isReservation: true,
+          ppe_message: getApplicablePpeMsgs(data.user, location),
+        });
       }
+    }
+    return {
+      records: reservationRecords,
+      recordCount: recordCount,
+    };
+  }
 
-          if (data.user_selected) {
-              var grReservation = new GlideRecord(tableName);
-              grReservation.addEncodedQuery(filter);
-              grReservation.query();
-
-              while (grReservation.next()) {
-                  ids.push(grReservation.getUniqueValue());
-              }
-          }
-          return ids;
+  function getMyTravelRequests() {
+    var travelRequests = [];
+    var recordCount = 0;
+    var filter = "request_state=4^active=true^travel_end>=" + new GlideDate();
+    filter = setUserContextAndFilterQuery(filter, "employee");
+    if (data.user_selected) {
+      var grTravel = getGlideRecord(
+        "sn_imt_travel_request",
+        filter,
+        "travel_start"
+      );
+      while (grTravel.next()) {
+        recordCount++;
+        var location = grTravel.getValue("location");
+        travelRequests.push({
+          sys_id: grTravel.getValue("sys_id"),
+          display_field: grTravel.getValue("number"),
+          secondary_display: grTravel.getDisplayValue("employee"),
+          shift: null,
+          location: grTravel.getDisplayValue("location"),
+          start: grTravel.getDisplayValue("travel_start"),
+          end: grTravel.getDisplayValue("travel_end"),
+          present: grTravel.getValue("travel_start") <= new GlideDate(),
+          requirements_status: validateRequirementStatusForLocation(
+            location,
+            data.user
+          ),
+          isTravelRequest: true,
+        });
       }
+    }
+    return {
+      records: travelRequests,
+      recordCount: recordCount,
+    };
+  }
 
-      // retrieve the reservations
+  function getGlideRecord(tableName, filter, orderBy) {
+    var gr = new GlideRecord(tableName);
+    gr.addEncodedQuery(filter);
+    gr.orderBy(orderBy);
+    gr.query();
+    return gr;
+  }
 
-      var reservationIDs = getMyReservationSysIds();
-      var grReservation = new GlideRecord('sn_wsd_core_reservation');
-      grReservation.addActiveQuery();
-      grReservation.orderBy('start');
-      grReservation.addQuery('sys_id', reservationIDs);
-      grReservation.query();
-      data.reservation = {};
-
-      data.reservation.reservation_list = [];
-      var recordIdx = 0;
-      var limit = options.items_per_page ? options.items_per_page : 10;
-      if (localInput && localInput.action == 'fetch_more')
-          data.lastLimit = localInput.lastLimit + limit;
-      else
-          data.lastLimit = limit;
-
+  function getMyReservationsAndTravelRequests() {
+    var reservations;
+    var travelRequests;
+    if (new GlidePluginManager().isActive("com.sn_wsd_core")) {
+      reservations = getMyReservations();
+    }
+    if (new GlidePluginManager().isActive("com.sn_imt_travel")) {
+      travelRequests = getMyTravelRequests();
+    }
+    var allRecords = [];
+    var allCount = 0;
+    if (reservations) {
+      allRecords = allRecords.concat(reservations.records);
+      allCount += reservations.recordCount;
+    }
+    if (travelRequests) {
+      allRecords = allRecords.concat(travelRequests.records);
+      allCount += travelRequests.recordCount;
+    }
+    data.today = new GlideDate().getValue();
+    // console.log("RC UWR server " + data.today);
+    data.records = allRecords;
+    data.count = allCount;
+    if (localInput && localInput.action == "fetch_more") {
+      data.lastLimit = localInput.lastLimit + limit;
+    } else {
+      data.lastLimit = limit;
+    }
+    if (reservations) {
+      data.hasMore = data.count > limit;
+    } else {
       data.hasMore = false;
-      while (recordIdx != data.lastLimit && grReservation.next()) {
-          var record = {};
+    }
+    // console.log("RC UWR server " + JSON.stringify(data));
+  }
 
-          record.sys_id = grReservation.getValue('sys_id');
-          record.display_field = grReservation.getValue('number');
-          record.secondary_display = grReservation.getDisplayValue('requested_for');
-          record.shift = grReservation.getDisplayValue('shift');
-          record.location = grReservation.getDisplayValue('location');
-          record.start = grReservation.getValue('start');
-          record.end = grReservation.getValue('end');
-
-          if ((recordIdx !== 0) && (data.lastLimit - limit === recordIdx))
-              record.highlight = true;
-
-          data.reservation.reservation_list.push(record);
-          recordIdx++;
-      }
-      */
-
-	//return;
-
-	//if (grReservation.next())
-	// data.hasMore = true;
+  getMyReservationsAndTravelRequests();
 })();
