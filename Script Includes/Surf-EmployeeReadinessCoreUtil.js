@@ -85,7 +85,7 @@ EmployeeReadinessCoreUtil.prototype = {
       error_message: "no_entry_in_health_and_safety_user_table",
     };
   },
-
+  // @note - alter location check
   getReqResults: function (employeeReadinessUserSysId, location) {
     var reqsGr = new GlideRecordSecure(
       "sn_imt_core_employee_health_and_safety_requirement"
@@ -102,11 +102,11 @@ EmployeeReadinessCoreUtil.prototype = {
       location =
         location ||
         (reqsGr.health_and_safety_user.user &&
+          reqsGr.health_and_safety_user.user.location) ||
+        (reqsGr.health_and_safety_user.user &&
           RequirementStatusUtil.guessUsersCurrentLocation(
             reqsGr.health_and_safety_user.user
-          )) ||
-        (reqsGr.health_and_safety_user.user &&
-          reqsGr.health_and_safety_user.user.location);
+          ));
 
       if (
         userId &&
@@ -176,7 +176,7 @@ EmployeeReadinessCoreUtil.prototype = {
     }
     return reqs;
   },
-  // RC - added this function from oob
+  // @note RC - added this function from oob
   getUnqualifiedReqResults: function (employeeReadinessUserSysId, location) {
     var reqsGr = new GlideRecordSecure(
       "sn_imt_core_employee_health_and_safety_requirement"
@@ -225,6 +225,62 @@ EmployeeReadinessCoreUtil.prototype = {
     }
     return reqs;
   },
+  // @audit how to make valid until work for present and future
+  getValidUntil: function (healthAndSafetyUserToRequirementGr) {
+    var EMPLOYEE_HEALTH_VERIFICATION = "de3151dac1111010fa9b0669111834d0";
+    var userId =
+      healthAndSafetyUserToRequirementGr.getElement(
+        "health_and_safety_user.user"
+      ) + "";
+    var validFor =
+      healthAndSafetyUserToRequirementGr.getElement(
+        "health_and_safety_requirement.valid_for"
+      ) + "";
+
+    if (
+      validFor &&
+      healthAndSafetyUserToRequirementGr.getValue(
+        "health_and_safety_requirement"
+      ) === EMPLOYEE_HEALTH_VERIFICATION
+    ) {
+      var verificationGr = new GlideRecord(
+        "sn_imt_monitoring_health_verification"
+      );
+      verificationGr.addQuery("employee", userId);
+      verificationGr.orderByDesc("attestation_date");
+      verificationGr.setLimit(1);
+      verificationGr.query();
+
+      if (verificationGr.next()) {
+        var attestationDate = verificationGr.getValue("attestation_date");
+        if (attestationDate) {
+          var expiration = new sn_imt_monitoring.HealthVerificationUtil().getExpiration(
+            verificationGr
+          );
+          if (!expiration) {
+            var attestationDateTime = new GlideDateTime(attestationDate);
+            attestationDateTime.add(
+              new GlideDateTime(validFor).getNumericValue()
+            );
+            return attestationDateTime;
+          }
+
+          var now = new GlideDateTime();
+          var triggerGdt = expiration.dateTime;
+          while (triggerGdt.compareTo(now) === -1) {
+            // in past
+            triggerGdt.addDaysUTC(1);
+          }
+
+          return triggerGdt;
+        }
+      }
+    }
+
+    return new GlideDateTime(
+      healthAndSafetyUserToRequirementGr.getValue("valid_until")
+    );
+  },
   lookupOrInsertVisitor: function (current, producer) {
     var visitorGr = new GlideRecord("sn_imt_core_visitor");
     visitorGr.addQuery("email", producer.visitor_email);
@@ -247,9 +303,9 @@ EmployeeReadinessCoreUtil.prototype = {
     }
   },
   /*******************************************************************************************************************
-    To send notifications :
-        If scheduled visit date is before the no of days configured in the system property 'sn_imt_core.days_to_ask_for_health_data' a notification will be sent immediately asking to provide  health status of visitor and no other notification will be sent. Else a notification will be sent to visitors notifying about their schdeuled visit and the notification askingg for health update will be sent before the no of days mentioned in 'sn_imt_core.days_to_ask_for_health_data'.
-    ********************************************************************************************************************/
+      To send notifications :
+          If scheduled visit date is before the no of days configured in the system property 'sn_imt_core.days_to_ask_for_health_data' a notification will be sent immediately asking to provide  health status of visitor and no other notification will be sent. Else a notification will be sent to visitors notifying about their schdeuled visit and the notification askingg for health update will be sent before the no of days mentioned in 'sn_imt_core.days_to_ask_for_health_data'.
+      ********************************************************************************************************************/
   sendNotification: function (invitationRec) {
     var sendImmediateNotification = gs.getProperty(
       "sn_imt_core.send_email_to_visitor"
