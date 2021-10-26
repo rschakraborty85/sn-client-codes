@@ -66,6 +66,7 @@ api.controller = function ($rootScope) {
       .then(function (response) {
         c.data = response.data;
         // @note isReservationOrTravelRequestForToday never works on load for us , always on server callback
+        // console.log("RC reservation data " + JSON.stringify(c.data));
         isReservationOrTravelRequestForToday();
       });
   });

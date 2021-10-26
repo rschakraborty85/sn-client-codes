@@ -5,18 +5,6 @@
   var limit = options.items_per_page ? options.items_per_page : 10;
   var util = new EmployeeReadinessCoreUtil();
 
-  // @note - RC - added new function
-  // assumption - it will always return one msg per call
-  function getApplicablePpeMsgs(user, location) {
-    var msg = new sn_imt_core.CustomRTORequirementsUtil().getReqResult(
-      user,
-      "ppe_message",
-      location
-    );
-    if (msg) return msg;
-    return "";
-  }
-
   function setUserContextAndFilterQuery(filter, queryParam) {
     if (!localInput && view == "self") {
       filter = filter + "^" + queryParam + "=" + gs.getUserID();
@@ -53,7 +41,7 @@
     healthAndSafetyGr.next();
     return healthAndSafetyGr.getUniqueValue();
   }
-
+  // @note seems like a good function as an example for valid until research
   function validateRequirementStatusForLocation(location, userId) {
     var locationRequirementStatus = util.getUnqualifiedReqResults(
       findHealthAndSafetyUser(userId),
@@ -76,7 +64,20 @@
       locationRequirements: locationRequirementStatus,
     };
   }
-
+  // @note - RC - added new function
+  // assumption - it will always return one msg per call
+  function getApplicablePpeMsgs(user, location) {
+    var msg = new sn_imt_core.CustomRTORequirementsUtil().getReqResult(
+      user,
+      "ppe_message",
+      location
+    );
+    // console.log(
+    //   "RC server ; ppe msg is " + msg + "\t" + user + "\t" + location
+    // );
+    if (msg) return msg.toString();
+    return "";
+  }
   function getMyReservations() {
     var reservationRecords = [];
     var recordCount = 0;

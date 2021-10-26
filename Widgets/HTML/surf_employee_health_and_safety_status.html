@@ -1,4 +1,4 @@
-<!-- employee_health_and_safety_status -->
+<!-- surf employee_health_and_safety_status -->
 <div class="panel panel-{{::options.color}} b">
   <div class="panel-heading headerBackgroundMobile">
     <h2 class="h4 panel-title" ng-if="!c.data.mobile">
@@ -206,7 +206,13 @@
           <span ng-if="c.is_dpl" class="sc-field-error-label not-cleared">
             <i class="fa fa-circle"></i>${ DPL In Progress}</span
           >
+          <!-- @note RC - added new check for STRY2462909 -->
 
+          <span ng-if="c.visitor_vaccine_check" class="visitor_vaccination_msg">
+            <!-- <i class="fa fa-circle"></i>${ Show Vaccine Card} -->
+            ${Note: Selected location requires vaccination verification for
+            visitors}
+          </span>
           <!-- <p>{{c.shorten.state}}</p> -->
         </div>
         <br />
@@ -236,6 +242,13 @@
         <div class="user-info" ng-if="userStatus.userType === 'visitor'">
           <h3>{{userStatus.baseData.user}}</h3>
           <p>{{userStatus.baseData.userTitleLocation}}</p>
+          <!-- @note RC - added new check for STRY2462909 -->
+
+          <span ng-if="c.visitor_vaccine_check" class="visitor_vaccination_msg">
+            ${Note: Selected location requires vaccination verification for
+            visitors}
+            <!-- <i class="fa fa-circle"></i>${ Show Vaccine Card} -->
+          </span>
         </div>
         <div class="user-info" ng-if="userStatus.userType === 'employee'">
           <sn-avatar
@@ -246,6 +259,9 @@
           <p>{{userStatus.baseData.userTitleLocation}}</p>
           <!-- @note RC - added part of STRY2462904 -->
           <p>{{userStatus.baseData.user_display_field}}</p>
+          <p class="ng-binding" style="font-weight: bold">
+            {{userStatus.baseData.user_ppe_msg}}
+          </p>
         </div>
         <div class="user-status">
           <span
@@ -256,6 +272,7 @@
             >{{userStatus.baseData.cleared_message}}</span
           >
         </div>
+
         <div class="safety-requirements">
           <div
             class="safety-requirement"
@@ -295,13 +312,13 @@
               >{{req.requirement_valid_until}}</span
             >
           </div>
-          <div
+          <!--  <div
             class="vaccination-requirement-message"
             ng-if="data.vaccineReqExists"
           >
             ${If vaccination/COVID-19 testing requirement shows as not cleared,
             be prepared to show proof of your negative test result.}
-          </div>
+          </div> -->
         </div>
 
         <!-- RC , visitor badge print -->

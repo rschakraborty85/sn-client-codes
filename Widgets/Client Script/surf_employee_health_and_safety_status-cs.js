@@ -135,6 +135,9 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
           c.ehs_visitor_building_id =
             spresponse.data.ehsVisitorRegistrationBuildingID;
           c.is_dpl = spresponse.data.is_dpl;
+          // @note RC - added part of STRY2462909
+          c.visitor_vaccine_check = spresponse.data.visitor_vaccine_check;
+
           // end
 
           c.storeVisitorDataObjPast = spresponse.data.visitorBadgeDataObj; // RC

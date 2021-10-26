@@ -1,4 +1,17 @@
 (function ($sp, input, data, options, gs) {
+  // @note RC - added part of STRY2462909
+  function checkIfVaccineRequiredForVisitor(
+    wsdVisitorUtil,
+    printer_config_sys_id
+  ) {
+    var printerConfigObj = wsdVisitorUtil.getPrinterConfigGrObj(
+      printer_config_sys_id
+    );
+    // console.log("RC server printer obj " + JSON.stringify(printerConfigObj));
+    return printerConfigObj.u_vaccine_check_enabled.display_value == "true"
+      ? true
+      : false;
+  }
   function checkIfDpl(dplCaseID) {
     if (dplCaseID) {
       var caseGR = new GlideRecord("sn_wsd_case_workplace_case");
@@ -48,7 +61,7 @@
   data.printer_display_default = visitorData.printer_display_default;
   data.printer_sys_id_default = visitorData.printer_sys_id_default;
 
-  // RC - end of change 
+  // RC - end of change
 
   var userSysId = $sp.getParameter("user");
   var visitorSysId = $sp.getParameter("visitor"); //RC check if visitor id is in url
@@ -72,7 +85,7 @@
   data.invalid_url_action_message = gs.getMessage(
     "Contact your admin for more info."
   );
-  // RC - visitor 2nd phase ; STRY2443341 
+  // RC - visitor 2nd phase ; STRY2443341
   data.wsd_default_printer = null;
   var wsdVisitorUtil = new sn_wsd_visitor.WVM_VisitorUiUtils();
   //     data.wsd_default_printer = wsdVisitorUtil.getDefaultPrinterForLoggedInUser();
@@ -216,6 +229,7 @@
             var registration_response_object = wsdVisitorUtil.getRegistrationGrObj(
               userSysId
             );
+            // console.log("RC server do i see this ? 1");
             if (registration_response_object) {
               //   console.log(
               //     "RC registration_response_object " +
@@ -224,6 +238,12 @@
               data.is_dpl = checkIfDpl(
                 registration_response_object.u_dpl_case.value
               );
+              // @note RC - added part of STRY2462909
+              data.visitor_vaccine_check = checkIfVaccineRequiredForVisitor(
+                wsdVisitorUtil,
+                input.wsd_printer_config_id + ""
+              );
+              // console.log("RC server do i see this ? 2");
               data.required_badge_print_data = {
                 id: registration_response_object.number.value,
                 name:

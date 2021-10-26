@@ -1,90 +1,5 @@
 var EmployeeReadinessCoreUtil = Class.create();
 EmployeeReadinessCoreUtil.prototype = {
-  initialize: function () {},
-
-  getUserReadinessStatus: function (type, userSysId, location) {
-    if (!userSysId) {
-      return {
-        error: true,
-        error_message: gs.getMessage("Empty user sys id provided"),
-      };
-    }
-
-    var userResult = this.getUserInfo(type, userSysId);
-    var statusResult = this.getUserMasterStatus(type, userSysId);
-    var reqsResult = [];
-    if (!statusResult.error)
-      reqsResult = this.getReqResults(
-        statusResult.userReadinessSysId,
-        location
-      );
-
-    return {
-      user_result: userResult,
-      status_result: statusResult,
-      reqs: reqsResult,
-    };
-  },
-
-  getUserInfo: function (type, userSysId) {
-    if (type === "employee") {
-      var userGr = new GlideRecordSecure("sys_user");
-      if (userGr.get(userSysId)) {
-        return {
-          error: false,
-          name: userGr.getValue("name"),
-          title: userGr.getValue("title"),
-          location: userGr.getDisplayValue("location"),
-        };
-      }
-    } else if (type === "visitor") {
-      var visitorGr = new GlideRecord("sn_imt_core_visitor");
-      if (visitorGr.get(userSysId)) {
-        return {
-          error: false,
-          name: visitorGr.getValue("visitor_name"),
-          title: "",
-          location: visitorGr.getValue("company"),
-        };
-      }
-    }
-    return {
-      error: true,
-      error_message: gs.getMessage("User not found in user table"),
-    };
-  },
-
-  getStatusMessage: function (cleared) {
-    return cleared ? gs.getMessage("Cleared") : gs.getMessage("Not cleared");
-  },
-
-  getUserMasterStatus: function (type, userSysId, location) {
-    var gr = new GlideRecordSecure("sn_imt_core_health_and_safety_user");
-    var uniqueField = type === "employee" ? "user" : "visitor";
-    gr.addQuery(uniqueField, userSysId);
-    gr.query();
-    if (gr.next()) {
-      var cleared = gr.getValue("requirements_status") === "cleared";
-      //var message = this.getStatusMessage(cleared); //Replaced the line with below for DFCT0140638 - PN
-      var message =
-        type === "employee"
-          ? RequirementStatusUtil.getLocationAwareStatus(gr, location)
-          : gr.getDisplayValue("requirement_status");
-
-      return {
-        error: false,
-        cleared: cleared,
-        message: message,
-        userReadinessSysId: gr.getUniqueValue(),
-      };
-    }
-    return {
-      error: true,
-      cleared: false,
-      message: message,
-      error_message: "no_entry_in_health_and_safety_user_table",
-    };
-  },
   // @note - alter location check
   getReqResults: function (employeeReadinessUserSysId, location) {
     var reqsGr = new GlideRecordSecure(
@@ -177,6 +92,7 @@ EmployeeReadinessCoreUtil.prototype = {
     return reqs;
   },
   // @note RC - added this function from oob
+  // @note important interface function to get all required details
   getUnqualifiedReqResults: function (employeeReadinessUserSysId, location) {
     var reqsGr = new GlideRecordSecure(
       "sn_imt_core_employee_health_and_safety_requirement"
@@ -226,6 +142,7 @@ EmployeeReadinessCoreUtil.prototype = {
     gs.error(this.STATIC_LOGGER);
     return reqs;
   },
+  // @note - RC added for debugging purposes 
   STATIC_LOGGER: "",
   // @audit how to make valid until work for present and future
   getValidUntil: function (healthAndSafetyUserToRequirementGr) {
@@ -300,6 +217,92 @@ EmployeeReadinessCoreUtil.prototype = {
       healthAndSafetyUserToRequirementGr.getValue("valid_until")
     );
   },
+  initialize: function () {},
+
+  getUserReadinessStatus: function (type, userSysId, location) {
+    if (!userSysId) {
+      return {
+        error: true,
+        error_message: gs.getMessage("Empty user sys id provided"),
+      };
+    }
+
+    var userResult = this.getUserInfo(type, userSysId);
+    var statusResult = this.getUserMasterStatus(type, userSysId);
+    var reqsResult = [];
+    if (!statusResult.error)
+      reqsResult = this.getReqResults(
+        statusResult.userReadinessSysId,
+        location
+      );
+
+    return {
+      user_result: userResult,
+      status_result: statusResult,
+      reqs: reqsResult,
+    };
+  },
+
+  getUserInfo: function (type, userSysId) {
+    if (type === "employee") {
+      var userGr = new GlideRecordSecure("sys_user");
+      if (userGr.get(userSysId)) {
+        return {
+          error: false,
+          name: userGr.getValue("name"),
+          title: userGr.getValue("title"),
+          location: userGr.getDisplayValue("location"),
+        };
+      }
+    } else if (type === "visitor") {
+      var visitorGr = new GlideRecord("sn_imt_core_visitor");
+      if (visitorGr.get(userSysId)) {
+        return {
+          error: false,
+          name: visitorGr.getValue("visitor_name"),
+          title: "",
+          location: visitorGr.getValue("company"),
+        };
+      }
+    }
+    return {
+      error: true,
+      error_message: gs.getMessage("User not found in user table"),
+    };
+  },
+
+  getStatusMessage: function (cleared) {
+    return cleared ? gs.getMessage("Cleared") : gs.getMessage("Not cleared");
+  },
+
+  getUserMasterStatus: function (type, userSysId, location) {
+    var gr = new GlideRecordSecure("sn_imt_core_health_and_safety_user");
+    var uniqueField = type === "employee" ? "user" : "visitor";
+    gr.addQuery(uniqueField, userSysId);
+    gr.query();
+    if (gr.next()) {
+      var cleared = gr.getValue("requirements_status") === "cleared";
+      //var message = this.getStatusMessage(cleared); //Replaced the line with below for DFCT0140638 - PN
+      var message =
+        type === "employee"
+          ? RequirementStatusUtil.getLocationAwareStatus(gr, location)
+          : gr.getDisplayValue("requirement_status");
+
+      return {
+        error: false,
+        cleared: cleared,
+        message: message,
+        userReadinessSysId: gr.getUniqueValue(),
+      };
+    }
+    return {
+      error: true,
+      cleared: false,
+      message: message,
+      error_message: "no_entry_in_health_and_safety_user_table",
+    };
+  },
+
   lookupOrInsertVisitor: function (current, producer) {
     var visitorGr = new GlideRecord("sn_imt_core_visitor");
     visitorGr.addQuery("email", producer.visitor_email);
