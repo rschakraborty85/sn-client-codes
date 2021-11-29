@@ -263,14 +263,28 @@
             {{userStatus.baseData.user_ppe_msg}}
           </p>
         </div>
+        <!-- @note RC STRY2462915 - if no requirement - show none -->
         <div class="user-status">
           <span
-            class="label sc-field-error-label"
-            ng-class="{'cleared' : userStatus.baseData.cleared, 'not-cleared' : !userStatus.baseData.cleared}"
+            class="label sc-field-error-label not_bold"
+            ng-class="{'no-requirement' : userStatus.baseData.cleared_none,'cleared' : userStatus.baseData.cleared, 'not-cleared' : !userStatus.baseData.cleared && !userStatus.baseData.cleared_none}"
           >
-            <i class="fa fa-circle"></i
-            >{{userStatus.baseData.cleared_message}}</span
+            <i
+              ng-if="userStatus.baseData.cleared && !userStatus.baseData.cleared_none"
+              class="fa fa-circle"
+              style="color: #1e856d"
+            ></i>
+            <i
+              ng-if="!userStatus.baseData.cleared && !userStatus.baseData.cleared_none"
+              class="fa fa-circle"
+              style="color: #cd3e3e"
+            ></i>
+            {{userStatus.baseData.cleared_message}}</span
           >
+          <!--pan class="label sc-field-error-label cleared" ng-if="userStatus.baseData.cleared">
+            <i class="fa fa-circle"></i>{{userStatus.baseData.cleared_message}}</span>
+          <span class="label sc-field-error-label not-cleared" ng-if="!userStatus.baseData.cleared">
+            <i class="fa fa-circle"></i>{{userStatus.baseData.cleared_message}}</span> -->
         </div>
 
         <div class="safety-requirements">
@@ -301,11 +315,15 @@
               class="safety-requirement-action-name"
               ng-if="req.requirement_action_name && c.data.mobile && !req.requirement_valid_until"
               aria-label="{{req.requirement_action_name}}"
-              href="{{(req.requirement_action_url ? userStatus.baseData.portalSuffix+req.requirement_action_url : '')}}"
+              href="{{(req.requirement_mobile_action_url ? userStatus.baseData.portalSuffix+req.requirement_mobile_action_url : '')}}"
               ng-click="c.processRequirementEvent(req)"
             >
               {{req.requirement_action_name}}
             </a>
+            <span
+              >{{c.data.mobile}}-{{data.vaccineRequirementId !=
+              req.requirement_id}}-{{data.view=='self'}}</span
+            >
             <span
               class="safety-requirement-valid-for safe-req-min-width-60"
               ng-if="req.requirement_valid_until && (c.data.mobile || data.vaccineRequirementId != req.requirement_id || data.view=='self') "

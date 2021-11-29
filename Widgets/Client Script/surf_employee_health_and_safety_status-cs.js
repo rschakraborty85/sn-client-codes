@@ -2,15 +2,17 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
   var c = this;
   // @note - RC part of STRY2462904
   c.viaEvent = false;
-  //STRY2461815 - Vacccine Changes
-  //Start
-  $scope.showVaccineReport = c.data.showVaccineReport;
-  $scope.showVaccineTest = c.data.showVaccineTest;
+  {
+    //STRY2461815 - Vacccine Changes
+    //Start
+    $scope.showVaccineReport = c.data.showVaccineReport;
+    $scope.showVaccineTest = c.data.showVaccineTest;
 
-  $scope.reportVaccinationLink = c.data.reportVaccinationLink;
-  $scope.requestTestVaccinationLink = c.data.requestTestVaccinationLink;
-  $scope.submitTestVaccinationLink = c.data.submitTestVaccinationLink;
-  //End
+    $scope.reportVaccinationLink = c.data.reportVaccinationLink;
+    $scope.requestTestVaccinationLink = c.data.requestTestVaccinationLink;
+    $scope.submitTestVaccinationLink = c.data.submitTestVaccinationLink;
+    //End
+  }
 
   c.storeVisitorDataObjPast = ""; // RC - to store visitor obj , used later
   c.visitorInUrl = false;
@@ -28,37 +30,7 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
     initialUserType = c.data.userType;
     c.visitorInUrl = true;
   }
-  // @note - RC part of STRY2462904
-  // most important function - reloads the status message and requirement from bottom widget
-  $rootScope.$on("onTravelOrReservationSelected", function (event, data) {
-    $timeout(function () {
-      // console.log(
-      //   //   "RC data is " + JSON.stringify(data)
-      //   "RC data.isSelected " + data.isSelected + "\t" + data.display_field
-      // );
-      if (!data.isSelected) {
-        // @note RC - added an extra boolean to denote this selectUser function call is via event
-        // this helps when screener unselects a reservation row
-        // it load the base user location record back again instead of reservation based health requirements
-        c.viaEvent = true;
-        $scope.userStatus.selectUser($scope.userStatus.baseData.userId);
-        $scope.userStatus.baseData.user_display_field = "";
-        return;
-      }
-      // @note - RC show additional data about reservation
-      $scope.userStatus.baseData.user_display_field =
-        "Reservation Selected : " +
-        data.display_field +
-        " - " +
-        data.secondary_location;
-      $scope.userStatus.baseData.cleared = data.requirements_status.status;
-      $scope.userStatus.baseData.cleared_message =
-        data.requirements_status.statusMessage;
-      $scope.userStatus.baseData.reqs =
-        data.requirements_status.locationRequirements;
-      $scope.userStatus.baseData.user_ppe_msg = data.ppe_message;
-    }, 500);
-  });
+
   //   RC - set defaults , printer
   $scope.visitor_printer_location = {
     displayValue: c.data.printer_display_default,
@@ -103,6 +75,34 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
       "_blank"
     );
   };
+  // @note - RC part of STRY2462904
+  // most important function - reloads the status message and requirement from bottom widget
+  $rootScope.$on("onTravelOrReservationSelected", function (event, data) {
+    $timeout(function () {
+      if (!data.isSelected) {
+        // @note RC - added an extra boolean to denote this selectUser function call is via event
+        // this helps when screener unselects a reservation row
+        // it load the base user location record back again instead of reservation based health requirements
+        c.viaEvent = true;
+        $scope.userStatus.selectUser($scope.userStatus.baseData.userId);
+        $scope.userStatus.baseData.user_display_field = "";
+        return;
+      }
+      // @note - RC show additional data about reservation
+      $scope.userStatus.baseData.user_display_field =
+        "Reservation Selected : " +
+        data.display_field +
+        " - " +
+        data.secondary_location;
+      $scope.userStatus.baseData.cleared = data.requirements_status.status;
+      $scope.userStatus.baseData.cleared_message =
+        data.requirements_status.statusMessage;
+      $scope.userStatus.baseData.reqs =
+        data.requirements_status.locationRequirements;
+      $scope.userStatus.baseData.user_ppe_msg = data.ppe_message;
+      $scope.userStatus.baseData.cleared_none = false;
+    }, 1500);
+  });
   $scope.userStatus = {
     userType: initialUserType,
     isLoading: false,
@@ -151,7 +151,7 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
     // @note refer onTravelOrReservationSelected event handler to understand ifViaEvent param
     selectUser: function (ID, name, printer_config_id, printer_changed) {
       //isPrinter
-      // console.log("RC selectUser " + this.selId + "\t" + ID);
+
       if (this.selId == ID && !c.viaEvent) {
         return true;
       }
@@ -390,10 +390,14 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
         parms.field.value &&
         parms.field.value != parms.oldValue
       ) {
-        $rootScope.$broadcast("getReservations", {
-          user_type: $scope.userStatus.userType,
-          user: parms.field.value,
-        });
+        // @note RC - added below check to make sure event is broadcasted only after
+        // this widget loads data
+
+        if (!$scope.userStatus.isLoading)
+          $rootScope.$broadcast("getReservations", {
+            user_type: $scope.userStatus.userType,
+            user: parms.field.value,
+          });
         if (parms.field.name == "visitor_printer_location") {
           $scope.userStatus.selectUser(
             parms.field.value,
@@ -402,7 +406,7 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
             true
           );
         }
-        // RC - visitor 2nd phase ; STRY2443341
+        // @note RC - visitor 2nd phase ; STRY2443341
         else if (parms.field.name == "wsd_visitor_printer_picker") {
           c.server
             .get({

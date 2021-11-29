@@ -157,8 +157,38 @@ EmployeeReadinessCoreUtil.prototype = {
     }
     return reqs;
   },
-
-  getUnqualifiedReqResults: function (employeeReadinessUserSysId, location) {
+  // @note - RC - added this new function - STRY2462904
+  getRequirementStatusBasedOnReservationDate: function (
+    start,
+    end,
+    valid_until,
+    record_sys_id
+  ) {
+    if (!valid_until) return false;
+    var startGdt = new GlideDateTime(start);
+    var endGdt = new GlideDateTime(end);
+    var validUntilGdt = new GlideDateTime(valid_until);
+    var duration = GlideDate.subtract(
+      endGdt.getDate(),
+      validUntilGdt.getDate()
+    ).getDayPart();
+    this.STATIC_LOGGER +=
+      "RC getRequirementStatusBasedOnReservationDate function \t" +
+      record_sys_id +
+      "\t" +
+      duration;
+    this.STATIC_LOGGER += "\n";
+    return duration >= 0 ? true : false;
+  },
+  STATIC_LOGGER: "EmployeeReadinessCoreUtil Logging\n",
+  //@note RC - important - added new param - start and end
+  // they are reservation data
+  getUnqualifiedReqResults: function (
+    employeeReadinessUserSysId,
+    location,
+    start,
+    end
+  ) {
     var reqsGr = new GlideRecordSecure(
       "sn_imt_core_employee_health_and_safety_requirement"
     );
@@ -172,15 +202,35 @@ EmployeeReadinessCoreUtil.prototype = {
     reqsGr.query();
     var reqs = [];
     while (reqsGr.next()) {
+      // @note - rc added new
+      var actualReqCleared = "";
+      var actualUsed = false;
+
       var reqCleared =
         reqsGr.getValue("unqualified_requirement_status") === "cleared";
       var validUntil = "";
       var reqActionName = "";
       var reqActionURL = "";
       if (reqsGr.getValue("valid_until") && reqCleared) {
+        this.STATIC_LOGGER +=
+          "RC getUnqualifiedReqResults function \t" +
+          reqsGr.getUniqueValue() +
+          "\t" +
+          end +
+          "\t" +
+          reqsGr.getValue("valid_until");
+        this.STATIC_LOGGER += "\n";
         validUntil = gs.getMessage("Valid until {0}", [
           this.getValidUntil(reqsGr).getDisplayValue(),
         ]);
+        actualReqCleared = this.getRequirementStatusBasedOnReservationDate(
+          start,
+          end,
+          reqsGr.getValue("valid_until"),
+          reqsGr.getUniqueValue()
+        );
+        actualUsed = true;
+        validUntil = actualReqCleared ? validUntil : "";
       }
       var reqRefRecord = reqsGr.health_and_safety_requirement.getRefRecord();
       if (reqRefRecord.actionable) {
@@ -195,7 +245,7 @@ EmployeeReadinessCoreUtil.prototype = {
         }
       }
       var req = {
-        requirement_cleared: reqCleared,
+        requirement_cleared: actualUsed ? actualReqCleared : reqCleared, //@note RC changed
         requirement_name: reqRefRecord.getDisplayValue("name"),
         requirement_table: reqRefRecord.getValue("table"),
         requirement_valid_until: validUntil,
@@ -204,6 +254,7 @@ EmployeeReadinessCoreUtil.prototype = {
       };
       reqs.push(req);
     }
+    gs.error(this.STATIC_LOGGER);
     return reqs;
   },
 

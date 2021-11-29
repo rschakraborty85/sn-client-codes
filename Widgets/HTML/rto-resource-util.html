@@ -1,0 +1,186 @@
+<!-- rto-resource-util -->
+<div
+  ng-if="c.data.rtoResource.alignmentType=='vertical_widget'"
+  class="panel b"
+>
+  <div class="img-container">
+    <div ng-if="!c.data.rtoResource.image">
+      <div class="placeholderImage" />
+    </div>
+    <div ng-if="c.data.rtoResource.image">
+      <img ng-src="{{c.data.rtoResource.image}}" />
+    </div>
+  </div>
+  <div class="panel-heading">
+    <h4 class="title">{{::c.data.rtoResource.title}}</h4>
+  </div>
+  <div class="panel-body description">
+    <div
+      ng-if="c.data.rtoResource.description"
+      ng-bind-html="c.data.rtoResource.description"
+    ></div>
+  </div>
+</div>
+<!--
+RC , created below renderer and type - part of microsite changes
+Allows rendering with video , 2 tiles
+Modified brightcove video renderer , made it controllable by biz user
+-->
+<div
+  ng-if="c.data.rtoResource.alignmentType=='horizontal_widget_video'"
+  class="horizontal-widget"
+>
+  <!-- {{c.data.brighcove_src_url}} -->
+  <!-- @note RC - added custom style -->
+  <div
+    class="panel-heading"
+    ng-class="{'zero-top':c.data.rtoResource.zero_top}"
+  >
+    <h4 class="panel-title">{{::c.data.rtoResource.title}}</h4>
+  </div>
+  <div class="panel-body" style="padding-right: 15px">
+    <div
+      class="col-xs-12 col-sm-8 col-md-8 col-lg-8"
+      ng-if="!data.show_larger_video"
+      ng-bind-html="c.data.rtoResource.description"
+      style="padding-left: 0px"
+    ></div>
+    <div
+      class="col-xs-12 col-sm-6 col-md-6 col-lg-6"
+      ng-if="data.show_larger_video && data.show_larger_video == 'true'"
+      ng-bind-html="c.data.rtoResource.description"
+      style="padding-left: 0px"
+    ></div>
+
+    <div
+      class="col-xs-12 col-sm-4 col-md-4 col-lg-4"
+      ng-if="!data.show_larger_video"
+      style="padding-right: 0px"
+    >
+      <div ng-if="c.data.rtoResource.video_id">
+        <div class="dibs_tab_1_video_cont">
+          <div class="dibs_tab_1_video">
+            <video-js
+              data-account="{{c.data.brighcove_data_account}}"
+              data-player="{{c.data.brighcove_data_player}}"
+              data-embed="default"
+              controls=""
+              data-video-id="{{c.data.rtoResource.video_id}}"
+              data-playlist-id=""
+              data-application-id=""
+              class="vjs-fluid"
+            >
+            </video-js>
+          </div>
+          <div
+            class="dibs_tab_1_video_text"
+            style="
+              margin-left: 0px;
+              margin-right: 2px;
+              margin-top: 4px;
+              font-weight: 350;
+            "
+          >
+            {{c.data.rtoResource.video_text}}
+          </div>
+        </div>
+        <!-- </div> -->
+      </div>
+    </div>
+    <div
+      class="col-xs-12 col-sm-6 col-md-6 col-lg-6"
+      ng-if="data.show_larger_video && data.show_larger_video == 'true'"
+      style="padding-right: 0px"
+    >
+      <div ng-if="c.data.rtoResource.video_id">
+        <div class="dibs_tab_1_video_cont">
+          <div class="dibs_tab_1_video">
+            <video-js
+              data-account="{{c.data.brighcove_data_account}}"
+              data-player="{{c.data.brighcove_data_player}}"
+              data-embed="default"
+              controls=""
+              data-video-id="{{c.data.rtoResource.video_id}}"
+              data-playlist-id=""
+              data-application-id=""
+              class="vjs-fluid"
+            >
+            </video-js>
+          </div>
+          <div
+            class="dibs_tab_1_video_text"
+            style="
+              margin-left: 0px;
+              margin-right: 2px;
+              margin-top: 4px;
+              font-weight: 350;
+            "
+          >
+            {{c.data.rtoResource.video_text}}
+          </div>
+        </div>
+        <!-- </div> -->
+      </div>
+    </div>
+  </div>
+</div>
+<div
+  ng-if="c.data.rtoResource.alignmentType=='horizontal_widget'"
+  class="horizontal-widget"
+>
+  <div class="panel-heading">
+    <h4 class="panel-title">{{::c.data.rtoResource.title}}</h4>
+  </div>
+  <div class="panel-body">
+    <div
+      class="col-xs-12 col-sm-6"
+      ng-bind-html="c.data.rtoResource.description"
+      style="padding-left: 0px"
+    ></div>
+    <div class="col-xs-12 col-sm-6">
+      <div ng-if="!c.data.rtoResource.image">
+        <div class="placeholderImage" />
+      </div>
+      <div ng-if="c.data.rtoResource.image">
+        <img ng-src="{{c.data.rtoResource.image}}" />
+      </div>
+    </div>
+  </div>
+</div>
+<div
+  ng-if="c.data.rtoResource.alignmentType=='vertical_widget_1'"
+  class="vertical-widget-1"
+>
+  <div class="panel-heading">
+    <h4 class="panel-title">{{::c.data.rtoResource.title}}</h4>
+  </div>
+  <div class="panel-body" style="padding-left: 0px">
+    <div class="col-xs-12">
+      <div ng-if="!c.data.rtoResource.image">
+        <div class="placeholderImage" />
+      </div>
+      <div ng-if="c.data.rtoResource.image">
+        <img ng-src="{{c.data.rtoResource.image}}" />
+      </div>
+    </div>
+    <div
+      class="col-xs-12 desc-vertical-widget1"
+      ng-bind-html="c.data.rtoResource.description"
+    ></div>
+    <div class="col-xs-12" ng-if="c.data.rtoResource.footerLink">
+      <a
+        class=""
+        style="color: #3b9d92"
+        ng-href="{{c.data.rtoResource.footerLink}}"
+        target="_blank"
+        ng-click="c.captureJourneyLink('covid', 'sp_widget', c.data.rtoResource.title+' - '+c.data.rtoResource.footerText + ' Link')"
+      >
+        {{c.data.rtoResource.footerText}}
+      </a>
+    </div>
+  </div>
+</div>
+<script src="https://players.brightcove.net/5703385908001/Qz2ECTdlP_default/index.min.js"></script>
+<!-- {{c.trustSrc(c.data.brighcove_src_url)}} 
+<!-- https://players.brightcove.net/5703385908001/default_default/index.min.js -->
+<!-- https://players.brightcove.net/5148394746001/QJ4mcjGqj_default/index.min.js -->

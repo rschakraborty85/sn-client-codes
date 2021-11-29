@@ -1,4 +1,15 @@
 (function ($sp, input, data, options, gs) {
+  // @note - RC - added new function
+  // assumption - it will always return one msg per call
+  function getApplicablePpeMsgs(user, location) {
+    var msg = new sn_imt_core.CustomRTORequirementsUtil().getReqResult(
+      user,
+      "ppe_message",
+      location
+    );
+    if (msg) return msg.toString();
+    return "";
+  }
   // @note RC - added part of STRY2462909
   function checkIfVaccineRequiredForVisitor(
     wsdVisitorUtil,
@@ -7,11 +18,12 @@
     var printerConfigObj = wsdVisitorUtil.getPrinterConfigGrObj(
       printer_config_sys_id
     );
-    // console.log("RC server printer obj " + JSON.stringify(printerConfigObj));
+
     return printerConfigObj.u_vaccine_check_enabled.display_value == "true"
       ? true
       : false;
   }
+
   function checkIfDpl(dplCaseID) {
     if (dplCaseID) {
       var caseGR = new GlideRecord("sn_wsd_case_workplace_case");
@@ -24,22 +36,23 @@
   data.userType = "employee";
 
   //STRY2461815 - Vacccine Changes
+  {
+    //Start
+    data.vaccineRequirementId = gs.getProperty(
+      "sn_imt_quarantine.rto_microsite_vaccine_req_id"
+    );
 
-  //Start
-  data.vaccineRequirementId = gs.getProperty(
-    "sn_imt_quarantine.rto_microsite_vaccine_req_id"
-  );
-
-  data.reportVaccinationLink = gs.getProperty(
-    "sn_imt_quarantine.rto_microsite_report_vaccination_link"
-  );
-  data.requestTestVaccinationLink = gs.getProperty(
-    "sn_imt_quarantine.rto_microsite_request_test_vaccination_link"
-  );
-  data.submitTestVaccinationLink = gs.getProperty(
-    "sn_imt_quarantine.rto_microsite_submit_test_vaccination_link"
-  );
-  //End
+    data.reportVaccinationLink = gs.getProperty(
+      "sn_imt_quarantine.rto_microsite_report_vaccination_link"
+    );
+    data.requestTestVaccinationLink = gs.getProperty(
+      "sn_imt_quarantine.rto_microsite_request_test_vaccination_link"
+    );
+    data.submitTestVaccinationLink = gs.getProperty(
+      "sn_imt_quarantine.rto_microsite_submit_test_vaccination_link"
+    );
+    //End
+  }
 
   var previewVisitorClicked = false;
   var printVisitorClicked = false;
@@ -88,12 +101,6 @@
   // RC - visitor 2nd phase ; STRY2443341
   data.wsd_default_printer = null;
   var wsdVisitorUtil = new sn_wsd_visitor.WVM_VisitorUiUtils();
-  //     data.wsd_default_printer = wsdVisitorUtil.getDefaultPrinterForLoggedInUser();
-  //     data.wsd_visitor_query = wsdVisitorUtil.getVisitorQueryBasedOnPrinter(
-  //         data.wsd_default_printer.value
-  //     );
-  // RC - visitor 2nd phase ; STRY2443341
-  //data.isEhsRequired = true; // keep EHS features on by default
 
   // view is missing from the url
   if (!view) {
@@ -182,59 +189,29 @@
               printVisitorClicked = true;
           }
 
-          // RC - visitor 2nd phase ; STRY2443341
-          // RC - turn of below code
-          //   RC - get new visitor list on change of printer
-          //   if (
-          //     input &&
-          //     input.type == "visitor" &&
-          //     input.printer_config_id &&
-          //     //input.is_printer &&
-          //     input.sysparm_details
-          //   ) {
-          //     var printerBasedQuery = visitorUtil.getTodaysVisitorQuery(
-          //       data.isScreener,
-          //       input.printer_config_id //here it is printer id
-          //     );
-          //     if (printerBasedQuery == "") printerBasedQuery = "DOESNT_EXIST";
-          //     data.visitor_query = "sys_idIN" + printerBasedQuery;
-          //   }
-
-          // RC - visitor 2nd phase ; STRY2443341
-          //   console.log(
-          //     input.type + " " + input.action + " " + input.wsd_printer_config_id
-          //   );
           if (
             input &&
             (input.action === "wsd_printer_changed" ||
               input.action === "fetch_user_status") &&
             input.wsd_printer_config_id
           ) {
-            //console.log("inside server wsd_visitor_printer_picker changed");
             data.userType = input.type;
             if (input.action === "wsd_printer_changed")
               data.wsd_visitor_query = wsdVisitorUtil.getVisitorQueryBasedOnPrinter(
                 input.wsd_printer_config_id
               );
-            // console.log(
-            //   "input.wsd_printer_config_id=" + input.wsd_printer_config_id
-            // );
             var buildingPhase = wsdVisitorUtil.getBuildingPhase(
               input.wsd_printer_config_id
             );
-            // console.log("buildingPhase=" + buildingPhase);
+
             data.isEhsRequired =
               parseInt(buildingPhase.split("_")[1], 10) <= 3 ? true : false;
-            // console.log("data.isEhsRequired=" + data.isEhsRequired);
+
             var registration_response_object = wsdVisitorUtil.getRegistrationGrObj(
               userSysId
             );
-            // console.log("RC server do i see this ? 1");
+
             if (registration_response_object) {
-              //   console.log(
-              //     "RC registration_response_object " +
-              //       JSON.stringify(registration_response_object)
-              //   );
               data.is_dpl = checkIfDpl(
                 registration_response_object.u_dpl_case.value
               );
@@ -243,7 +220,7 @@
                 wsdVisitorUtil,
                 input.wsd_printer_config_id + ""
               );
-              // console.log("RC server do i see this ? 2");
+
               data.required_badge_print_data = {
                 id: registration_response_object.number.value,
                 name:
@@ -260,13 +237,9 @@
               };
               var registrationBuildingID =
                 registration_response_object.location.value;
-              //   console.log("registrationBuildingID=" + registrationBuildingID);
             }
           }
-          // RC - visitor 2nd phase ; STRY2443341
-          //   console.log(
-          //     "data.isEhsRequired=" + data.isEhsRequired + " " + userSysId
-          //   );
+
           if (data.userType == "visitor") {
             // if ehs is not required , dont execute below code
             if (!data.isEhsRequired) return;
@@ -274,7 +247,6 @@
             else if (data.isEhsRequired && !userSysId) return;
             // convert wsd sysid to ehs sysid
             else if (data.isEhsRequired && userSysId) {
-              //   console.log("BEFORE change userSysId=" + userSysId);
               var ehsVisitorObj = wsdVisitorUtil.getEhsVisitorObjFromWsdID(
                 userSysId
               );
@@ -283,17 +255,25 @@
               userSysId = ehsVisitorObj.visitor.value;
               data.ehsVisitorInvitationSysID = ehsVisitorObj.sys_id.value;
               data.ehsVisitorRegistrationBuildingID = registrationBuildingID;
-
-              //   console.log("userSysId=" + userSysId);
-              //   console.log(
-              //     "data.ehsVisitorRegistrationBuildingID=" +
-              //       data.ehsVisitorRegistrationBuildingID
-              //   );
             }
           }
 
           data.userFound = false;
-          var result = util.getUserReadinessStatus(data.userType, userSysId);
+
+          var userGr = new GlideRecord("sys_user");
+          userGr.get(userSysId);
+          var location =
+            options.useRegularStatus === "true"
+              ? userGr.getValue("location")
+              : null;
+
+          var result = util.getUserReadinessStatus(
+            data.userType,
+            userSysId,
+            location
+          ); // Copied from OOB - POC2
+          //var result = util.getUserReadinessStatus(data.userType, userSysId);
+
           var userResult = result.user_result;
           if (userResult.error && userResult.error_message) {
             data.user_error_message = userResult.error_message;
@@ -339,16 +319,30 @@
               data.cleared = result.status_result.cleared;
               data.cleared_message = result.status_result.message;
               data.reqs = result.reqs;
+              data.cleared_none = false;
+              // @note RC STRY2462915 - if no requirement - show none
+              console.log(
+                "RC none check " + data.reqs.length + "\t" + data.isEhsRequired
+              );
+              if (data.reqs.length == 0 && !data.isEhsRequired) {
+                data.cleared_message = "No requirement";
+                data.cleared_none = true;
+                data.cleared = false;
+              }
+              // @note - RC - added for PPE msg 
+              if (data.userType === "employee") {
+                data.user_ppe_msg = getApplicablePpeMsgs(userSysId, location);
+              }
               //STRY2461815 - Vacccine Changes
               //Start
               data.vaccineReqExists = false;
 
               /*
-		data.reqs.push({'requirement_name':'Covid Vaccine Requirement',
-										requirement_action_name:'view details',
-										requirement_id:'5c5ee7aa81302010fa9bcd132675a426'
-									 });
-		 					*/
+                  data.reqs.push({'requirement_name':'Covid Vaccine Requirement',
+                  requirement_action_name:'view details',
+                  requirement_id:'5c5ee7aa81302010fa9bcd132675a426'
+                 });
+             */
               for (var iReqLoop = 0; iReqLoop < data.reqs.length; iReqLoop++) {
                 if (
                   data.reqs[iReqLoop].requirement_id ==

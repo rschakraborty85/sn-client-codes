@@ -1,28 +1,115 @@
 var EmployeeReadinessCoreUtil = Class.create();
 EmployeeReadinessCoreUtil.prototype = {
-  // @note - alter location check
+  initialize: function () {
+    this.propertyLookupFn = function (key, altValue) {
+      return gs.getProperty(key, altValue);
+    };
+  },
+
+  getUserReadinessStatus: function (type, userSysId, location) {
+    if (!userSysId) {
+      return {
+        error: true,
+        error_message: gs.getMessage("Empty user sys id provided"),
+      };
+    }
+
+    var userResult = this.getUserInfo(type, userSysId);
+    var statusResult = this.getUserMasterStatus(type, userSysId, location);
+    var reqsResult = [];
+    if (!statusResult.error) {
+      reqsResult = this.getReqResults(
+        statusResult.userReadinessSysId,
+        location
+      );
+    }
+
+    return {
+      user_result: userResult,
+      status_result: statusResult,
+      reqs: reqsResult,
+    };
+  },
+
+  getUserInfo: function (type, userSysId) {
+    if (type === "employee") {
+      var userGr = new GlideRecordSecure("sys_user");
+      if (userGr.get(userSysId)) {
+        return {
+          error: false,
+          name: userGr.getValue("name"),
+          title: userGr.getValue("title"),
+          location: userGr.getDisplayValue("location"),
+          country: userGr.getValue("country"),
+        };
+      }
+    } else if (type === "visitor") {
+      var visitorGr = new GlideRecord("sn_imt_core_visitor");
+      if (visitorGr.get(userSysId)) {
+        return {
+          error: false,
+          name: visitorGr.getValue("visitor_name"),
+          title: "",
+          location: visitorGr.getValue("company"),
+        };
+      }
+    }
+    return {
+      error: true,
+      error_message: gs.getMessage("User not found in user table"),
+    };
+  },
+
+  getStatusMessage: function (cleared) {
+    return cleared ? gs.getMessage("Cleared") : gs.getMessage("Not Cleared");
+  },
+
+  getUserMasterStatus: function (type, userSysId, location) {
+    var gr = new GlideRecordSecure("sn_imt_core_health_and_safety_user");
+    var uniqueField = type === "employee" ? "user" : "visitor";
+    gr.addQuery(uniqueField, userSysId);
+    gr.query();
+    if (gr.next()) {
+      var message =
+        type === "employee"
+          ? RequirementStatusUtil.getLocationAwareStatus(gr, location)
+          : gr.getDisplayValue("requirement_status");
+      var cleared = message === "Cleared";
+
+      return {
+        error: false,
+        cleared: cleared,
+        message: message,
+        userReadinessSysId: gr.getUniqueValue(),
+      };
+    }
+    return {
+      error: true,
+      cleared: false,
+      message: message,
+      error_message: "no_entry_in_health_and_safety_user_table",
+    };
+  },
+
   getReqResults: function (employeeReadinessUserSysId, location) {
     var reqsGr = new GlideRecordSecure(
       "sn_imt_core_employee_health_and_safety_requirement"
     );
     reqsGr.addQuery("health_and_safety_user", employeeReadinessUserSysId);
     reqsGr.addQuery("health_and_safety_requirement.active", true);
-    //reqsGr.orderBy("health_and_safety_requirement.name"); //DFCT0119625 - RC
-    reqsGr.orderBy("health_and_safety_requirement.u_order"); //STRY2461810 - RH
     reqsGr.query();
     var reqs = [];
     while (reqsGr.next()) {
-      //Line till continue is inherited from OOTB code to fix DFCT0140638 - PN
       var userId = reqsGr.health_and_safety_user.user + "";
       location =
         location ||
         (reqsGr.health_and_safety_user.user &&
-          reqsGr.health_and_safety_user.user.location) ||
-        (reqsGr.health_and_safety_user.user &&
           RequirementStatusUtil.guessUsersCurrentLocation(
             reqsGr.health_and_safety_user.user
-          ));
-
+          )) ||
+        (reqsGr.health_and_safety_user.user &&
+          reqsGr.health_and_safety_user.user.location);
+      gs.warn("RC debug - getReqResults function ; location is " + location);
       if (
         userId &&
         location &&
@@ -35,17 +122,18 @@ EmployeeReadinessCoreUtil.prototype = {
         continue;
       }
 
-      var reqCleared = reqsGr.getValue("requirement_status") === "cleared";
+      var statusField = location
+        ? "unqualified_requirement_status"
+        : "requirement_status";
+      var reqCleared = reqsGr.getValue(statusField) === "cleared";
       var validUntil = "";
       var reqActionName = "";
       var reqActionURL = "";
       var reqMobileActionURL = "";
+      var reqActionUrlTarget = "";
       if (reqsGr.getValue("valid_until") && reqCleared) {
-        var currentDateTime = new GlideDateTime();
-        var valid_until = new GlideDateTime();
-        valid_until.setValue(reqsGr.getValue("valid_until"));
         validUntil = gs.getMessage("Valid until {0}", [
-          valid_until.getDisplayValue(),
+          this.getValidUntil(reqsGr).getDisplayValue(),
         ]);
       }
       var reqRefRecord = reqsGr.health_and_safety_requirement.getRefRecord();
@@ -56,18 +144,12 @@ EmployeeReadinessCoreUtil.prototype = {
         reqsGr.health_and_safety_user.user.sys_id,
         reqsGr.health_and_safety_requirement
       );
-      //gs.info("reqRefRecord.actionable " + reqRefRecord.actionable);
+
       if (reqRefRecord.actionable) {
-        //                 gs.info("url target value " + reqRefRecord.getValue("u_url_target"));
-        var url_target = gs.nil(reqRefRecord.getValue("u_url_target"))
-          ? "_self"
-          : reqRefRecord.getValue("u_url_target");
-        //                 gs.info("url_target=" + url_target);
         if (reqRefRecord.getValue("action_visibility") === "always_visible") {
           reqActionName = reqRefRecord.getValue("action_name");
           reqActionURL = reqRefRecord.getValue("action_url");
           reqMobileActionURL = mobileCompatibleActionUrl;
-          // RC
         } else {
           if (!reqCleared) {
             reqActionName = reqRefRecord.getValue("action_name");
@@ -75,25 +157,50 @@ EmployeeReadinessCoreUtil.prototype = {
             reqMobileActionURL = mobileCompatibleActionUrl;
           }
         }
+        // @note RC - added target link part of response
+        reqActionUrlTarget = reqRefRecord.getValue("u_url_target");
       }
       var req = {
         requirement_cleared: reqCleared,
-        requirement_id: reqRefRecord.getValue("sys_id"),
         requirement_name: reqRefRecord.getDisplayValue("name"),
         requirement_table: reqRefRecord.getValue("table"),
         requirement_valid_until: validUntil,
         requirement_action_name: reqActionName,
         requirement_action_url: reqActionURL,
-        requirement_action_url_target: url_target,
+        requirement_action_url_target: reqActionUrlTarget,
+        requirement_id: reqRefRecord.getValue("sys_id"),
         requirement_mobile_action_url: reqMobileActionURL,
       };
       reqs.push(req);
     }
     return reqs;
   },
-  // @note RC - added this function from oob
-  // @note important interface function to get all required details
-  getUnqualifiedReqResults: function (employeeReadinessUserSysId, location) {
+  // @note - RC - added this new function - STRY2462904
+  getRequirementStatusBasedOnReservationDate: function (
+    start,
+    end,
+    valid_until,
+    record_sys_id
+  ) {
+    if (!valid_until) return false;
+    var startGdt = new GlideDateTime(start);
+    var endGdt = new GlideDateTime(end);
+    var validUntilGdt = new GlideDateTime(valid_until);
+    var duration = GlideDate.subtract(
+      endGdt.getDate(),
+      validUntilGdt.getDate()
+    ).getDayPart();
+
+    return duration >= 0 ? true : false;
+  },
+  //@note RC - important - added new param - start and end
+  // they are reservation data
+  getUnqualifiedReqResults: function (
+    employeeReadinessUserSysId,
+    location,
+    start,
+    end
+  ) {
     var reqsGr = new GlideRecordSecure(
       "sn_imt_core_employee_health_and_safety_requirement"
     );
@@ -107,50 +214,69 @@ EmployeeReadinessCoreUtil.prototype = {
     reqsGr.query();
     var reqs = [];
     while (reqsGr.next()) {
+      // @note - rc added new
+      var actualReqCleared = "";
+      var actualUsed = false;
+
       var reqCleared =
         reqsGr.getValue("unqualified_requirement_status") === "cleared";
+      var final_req_cleared = "";
       var validUntil = "";
       var reqActionName = "";
       var reqActionURL = "";
+      var reqMobileActionURL = "";
       if (reqsGr.getValue("valid_until") && reqCleared) {
         validUntil = gs.getMessage("Valid until {0}", [
           this.getValidUntil(reqsGr).getDisplayValue(),
         ]);
+        actualReqCleared = this.getRequirementStatusBasedOnReservationDate(
+          start,
+          end,
+          reqsGr.getValue("valid_until"),
+          reqsGr.getUniqueValue()
+        );
+        actualUsed = true;
+        validUntil = actualReqCleared ? validUntil : "";
       }
+
+      // Final Requirement Cleared Value
+      final_req_cleared = actualUsed ? actualReqCleared : reqCleared;
       var reqRefRecord = reqsGr.health_and_safety_requirement.getRefRecord();
+
+      var rtoMobileUtil = new x_snc_wp_mobile.RTOMobileDisplay();
+      var mobileCompatibleActionUrl = rtoMobileUtil.actionableRequirementLink(
+        reqsGr.health_and_safety_user.user.sys_id,
+        reqsGr.health_and_safety_requirement
+      );
       if (reqRefRecord.actionable) {
         if (reqRefRecord.getValue("action_visibility") === "always_visible") {
           reqActionName = reqRefRecord.getValue("action_name");
           reqActionURL = reqRefRecord.getValue("action_url");
+          reqMobileActionURL = mobileCompatibleActionUrl;
         } else {
-          if (!reqCleared) {
+          if (!final_req_cleared) {
             reqActionName = reqRefRecord.getValue("action_name");
             reqActionURL = reqRefRecord.getValue("action_url");
+            reqMobileActionURL = mobileCompatibleActionUrl;
           }
         }
       }
       var req = {
-        requirement_cleared: reqCleared,
+        requirement_ref_record: reqRefRecord.getValue("sys_id"),
+        requirement_cleared: actualUsed ? actualReqCleared : reqCleared, //@note RC changed
         requirement_name: reqRefRecord.getDisplayValue("name"),
         requirement_table: reqRefRecord.getValue("table"),
         requirement_valid_until: validUntil,
         requirement_action_name: reqActionName,
         requirement_action_url: reqActionURL,
+        requirement_mobile_action_url: reqMobileActionURL,
       };
       reqs.push(req);
     }
-    gs.error(this.STATIC_LOGGER);
     return reqs;
   },
-  // @note - RC added for debugging purposes 
-  STATIC_LOGGER: "",
-  // @audit how to make valid until work for present and future
+
   getValidUntil: function (healthAndSafetyUserToRequirementGr) {
-    this.STATIC_LOGGER +=
-      "LOGGING getValidUntil " +
-      "\t" +
-      healthAndSafetyUserToRequirementGr.getUniqueValue();
-    this.STATIC_LOGGER += "\n";
     var EMPLOYEE_HEALTH_VERIFICATION = "de3151dac1111010fa9b0669111834d0";
     var userId =
       healthAndSafetyUserToRequirementGr.getElement(
@@ -177,25 +303,15 @@ EmployeeReadinessCoreUtil.prototype = {
 
       if (verificationGr.next()) {
         var attestationDate = verificationGr.getValue("attestation_date");
-        this.STATIC_LOGGER +=
-          "RC getValidUntil function attestationDate " + attestationDate;
-        this.STATIC_LOGGER += "\n";
         if (attestationDate) {
           var expiration = new sn_imt_monitoring.HealthVerificationUtil().getExpiration(
             verificationGr
           );
-          this.STATIC_LOGGER +=
-            "RC getValidUntil function expiration " + expiration;
-          this.STATIC_LOGGER += "\n";
           if (!expiration) {
             var attestationDateTime = new GlideDateTime(attestationDate);
             attestationDateTime.add(
               new GlideDateTime(validFor).getNumericValue()
             );
-            this.STATIC_LOGGER +=
-              "RC getValidUntil function inside expiration " +
-              attestationDateTime;
-            this.STATIC_LOGGER += "\n";
             return attestationDateTime;
           }
 
@@ -205,9 +321,7 @@ EmployeeReadinessCoreUtil.prototype = {
             // in past
             triggerGdt.addDaysUTC(1);
           }
-          this.STATIC_LOGGER +=
-            "RC getValidUntil function outside expiration " + triggerGdt;
-          this.STATIC_LOGGER += "\n";
+
           return triggerGdt;
         }
       }
@@ -216,91 +330,6 @@ EmployeeReadinessCoreUtil.prototype = {
     return new GlideDateTime(
       healthAndSafetyUserToRequirementGr.getValue("valid_until")
     );
-  },
-  initialize: function () {},
-
-  getUserReadinessStatus: function (type, userSysId, location) {
-    if (!userSysId) {
-      return {
-        error: true,
-        error_message: gs.getMessage("Empty user sys id provided"),
-      };
-    }
-
-    var userResult = this.getUserInfo(type, userSysId);
-    var statusResult = this.getUserMasterStatus(type, userSysId);
-    var reqsResult = [];
-    if (!statusResult.error)
-      reqsResult = this.getReqResults(
-        statusResult.userReadinessSysId,
-        location
-      );
-
-    return {
-      user_result: userResult,
-      status_result: statusResult,
-      reqs: reqsResult,
-    };
-  },
-
-  getUserInfo: function (type, userSysId) {
-    if (type === "employee") {
-      var userGr = new GlideRecordSecure("sys_user");
-      if (userGr.get(userSysId)) {
-        return {
-          error: false,
-          name: userGr.getValue("name"),
-          title: userGr.getValue("title"),
-          location: userGr.getDisplayValue("location"),
-        };
-      }
-    } else if (type === "visitor") {
-      var visitorGr = new GlideRecord("sn_imt_core_visitor");
-      if (visitorGr.get(userSysId)) {
-        return {
-          error: false,
-          name: visitorGr.getValue("visitor_name"),
-          title: "",
-          location: visitorGr.getValue("company"),
-        };
-      }
-    }
-    return {
-      error: true,
-      error_message: gs.getMessage("User not found in user table"),
-    };
-  },
-
-  getStatusMessage: function (cleared) {
-    return cleared ? gs.getMessage("Cleared") : gs.getMessage("Not cleared");
-  },
-
-  getUserMasterStatus: function (type, userSysId, location) {
-    var gr = new GlideRecordSecure("sn_imt_core_health_and_safety_user");
-    var uniqueField = type === "employee" ? "user" : "visitor";
-    gr.addQuery(uniqueField, userSysId);
-    gr.query();
-    if (gr.next()) {
-      var cleared = gr.getValue("requirements_status") === "cleared";
-      //var message = this.getStatusMessage(cleared); //Replaced the line with below for DFCT0140638 - PN
-      var message =
-        type === "employee"
-          ? RequirementStatusUtil.getLocationAwareStatus(gr, location)
-          : gr.getDisplayValue("requirement_status");
-
-      return {
-        error: false,
-        cleared: cleared,
-        message: message,
-        userReadinessSysId: gr.getUniqueValue(),
-      };
-    }
-    return {
-      error: true,
-      cleared: false,
-      message: message,
-      error_message: "no_entry_in_health_and_safety_user_table",
-    };
   },
 
   lookupOrInsertVisitor: function (current, producer) {
@@ -325,15 +354,17 @@ EmployeeReadinessCoreUtil.prototype = {
     }
   },
   /*******************************************************************************************************************
-      To send notifications :
-          If scheduled visit date is before the no of days configured in the system property 'sn_imt_core.days_to_ask_for_health_data' a notification will be sent immediately asking to provide  health status of visitor and no other notification will be sent. Else a notification will be sent to visitors notifying about their schdeuled visit and the notification askingg for health update will be sent before the no of days mentioned in 'sn_imt_core.days_to_ask_for_health_data'.
-      ********************************************************************************************************************/
+        To send notifications :
+            If scheduled visit date is before the no of days configured in the system property 'sn_imt_core.days_to_ask_for_health_data' a notification will be sent immediately asking to provide  health status of visitor and no other notification will be sent. Else a notification will be sent to visitors notifying about their scheduled visit and the notification asking for health update will be sent before the no of days mentioned in 'sn_imt_core.days_to_ask_for_health_data'.
+        ********************************************************************************************************************/
   sendNotification: function (invitationRec) {
-    var sendImmediateNotification = gs.getProperty(
+    var sendImmediateNotification = DomainProperty.getProperty(
+      this.propertyLookupFn,
       "sn_imt_core.send_email_to_visitor"
     );
     sendImmediateNotification = sendImmediateNotification.toLowerCase();
-    var daysToAskForHealthStatus = gs.getProperty(
+    var daysToAskForHealthStatus = DomainProperty.getProperty(
+      this.propertyLookupFn,
       "sn_imt_core.days_to_ask_for_health_data"
     );
     var daysDiff = this._getDayDifference(invitationRec);
@@ -356,7 +387,8 @@ EmployeeReadinessCoreUtil.prototype = {
   },
 
   sendEmailAskingForHealthStatus: function () {
-    var daysToAskForHealthStatus = gs.getProperty(
+    var daysToAskForHealthStatus = DomainProperty.getProperty(
+      this.propertyLookupFn,
       "sn_imt_core.days_to_ask_for_health_data"
     );
     var minsToAskForHealthStatus =
@@ -401,7 +433,6 @@ EmployeeReadinessCoreUtil.prototype = {
       }
     }
   },
-
   //STRY2461815:Vaccination Changes EmployeeReadiness
   getUserVaccineReportStatus: function () {
     //return (gs.getProperty('sn_imt_core.testvaccinereport')  == "true" ? true : false);
@@ -452,6 +483,5 @@ EmployeeReadinessCoreUtil.prototype = {
     }
     return false;
   },
-
   type: "EmployeeReadinessCoreUtil",
 };

@@ -1,0 +1,241 @@
+.visitor_vaccination_msg {
+  font-weight: 600;
+}
+.rc_cleared {
+  background-color: $brand-success;
+  color: $state-success-text;
+}
+.invalid-url {
+  padding: 20px;
+  text-align: center;
+
+  .strong {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+}
+
+.loading-indicator {
+  padding-top: 20px;
+  text-align: center;
+}
+
+.user-type-container {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 10px;
+}
+
+.user-type-message {
+  padding-top: 20px;
+  text-align: center;
+}
+
+.visitor-radio-button {
+  margin-left: 30px;
+}
+
+.radio-button-label {
+  margin-left: 5px;
+}
+
+.user-status-container {
+  .user-not-found {
+    text-align: center;
+    padding-top: 20px;
+
+    .strong {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+  } /** end of .user-not-found **/
+
+  .user-found {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .user-info {
+      padding-top: 20px;
+      align-content: center;
+      text-align: center;
+
+      /** fix cursor when hover over avatar **/
+      .avatar-container {
+        cursor: default;
+      }
+      /** make the avatar circle bigger **/
+      .avatar-container.avatar-bigger {
+        width: 10rem;
+        height: 10rem;
+      }
+      /** make the text in the avatar bigger when no pic **/
+      .avatar-container .avatar.soloAvatar .sub-avatar {
+        font-size: 4rem;
+        line-height: 9.5rem;
+      }
+    } /** end of .user-info **/
+    .user-status {
+      padding-bottom: 20px;
+
+      .not_bold {
+        font-weight: 400 !important;
+        padding-top: 3.15px !important;
+      }
+
+      .label {
+        i.fa.fa-circle {
+          padding-right: 5px;
+        }
+        /* @note RC - added new style */
+        &.no-requirement {
+          color: #474d52;
+          background-color: #f3f5f7;
+        }
+        &.cleared {
+          background-color: #dff0d8;
+          color: #293e40;
+        }
+        &.not-cleared {
+          background-color: #f1cecd;
+          color: #293e40;
+        }
+      } /** end of .label **/
+    } /** end of .user-status **/
+
+    .safety-requirements {
+      .safety-requirement {
+        padding-top: 5px;
+        display: flex;
+        align-items: baseline;
+
+        .safety-requirement-name {
+          padding-left: 5px;
+        }
+
+        .safety-requirement-action-name {
+          padding-left: 5px;
+        }
+        .safety-requirement-valid-for {
+          padding-left: 5px;
+          font-style: italic;
+          color: $text-muted;
+        }
+
+        i.fa {
+          width: 14px;
+          height: 14px;
+          padding-right: 12px;
+
+          &.fa-check {
+            color: $brand-success;
+          }
+          &.fa-minus {
+            color: $state-danger-text;
+          }
+        } /** end of i.fa **/
+      } /** end of .safety-requirement **/
+    } /** end of .safety-requirements **/
+  } /** end of .user-status **/
+} /** end of .user-found **/
+
+.headerBackgroundMobile {
+  background-color: white;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 17px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 13px;
+  width: 13px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+}
+
+input:checked + .slider {
+  background-color: #2196f3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196f3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(13px);
+  -ms-transform: translateX(13px);
+  transform: translateX(13px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 17px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.add-fav-btn {
+  background-color: #1f8476;
+  border-color: #1f8476;
+  color: #ffffff;
+}
+
+.add-mobile-style {
+  margin-top: 10px;
+}
+
+.vaccination-requirement-message {
+  padding-top: 15px;
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 550;
+  line-height: 18px;
+  letter-spacing: 0px;
+  text-align: left;
+  color: rgba(102, 102, 102, 1);
+  max-width: fit-content;
+}
+
+@media only screen and (min-width: 991px) {
+  .safe-req-min-width-60 {
+    min-width: 60%;
+  }
+}
+
+@media only screen and (max-width: 990px) {
+  .safety-requirement-valid-right-align {
+    width: 60%;
+  }
+
+  .safe-req-min-width-60 {
+    width: 60%;
+  }
+}

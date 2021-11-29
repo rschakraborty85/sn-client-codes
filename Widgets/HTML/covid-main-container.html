@@ -1,0 +1,783 @@
+<!-- COVID MAIN CONTAINER -->
+<div ng-show="c.showLoading" class="loading"></div>
+<div class="panel panel-default">
+  <div class="underline-tabs sticky-top" ng-if="c.tabs">
+    <ul class="nav nav-tabs tab_slide" id="myTab" role="tablist">
+      <li
+        ng-repeat="item in c.tabs"
+        ng-class="{'active' : item.active_tab}"
+        class="ng-scope"
+        style=""
+      >
+        <a
+          ng-click="c.selectTab(item)"
+          class="nav-link"
+          id="{{item.id}}-tab"
+          data-toggle="tab"
+          href=""
+          role="tab"
+          aria-controls="{{item.id}}"
+        >
+          <img ng-src="{{item.image}}" />
+          <h5 class="ng-binding">{{item.name}}</h5>
+        </a>
+      </li>
+    </ul>
+  </div>
+  <!-- tab end-->
+  <div class="rto-tab-content" id="myTabContent">
+    <!-- RC - STRY2373737 This is return to workplace tab content -->
+    <div
+      style="padding-left: 5px"
+      id="rtwTab"
+      ng-if="c.currTab == 'returnToWorkplace' &amp;&amp; c.data.isMobile"
+    >
+      <!-- RC , dont show this tab in mobile view , only app specific view -->
+      <span
+        >${Please use the Return to Workplace app located in the "Apps" section
+        on the homepage.}</span
+      >
+    </div>
+    <div
+      id="rtwTab"
+      ng-if="c.currTab == 'returnToWorkplace' &amp;&amp; !c.data.isMobile"
+      class="lower-container rto-panel-body"
+    >
+      <!--  New Changes Start -->
+
+      <div class="row row-no-gutters">
+        <div class="col-md-4">
+          <div ng-if="data.rtwShiftStatus">
+            <sp-widget widget="data.rtwShiftStatus"></sp-widget>
+          </div>
+          <div>
+            <sp-widget widget="data.rtw_my_ofice_and_reservation"></sp-widget>
+            <!-- <widget id="rto-office-status"></widget> -->
+          </div>
+        </div>
+        <div class="col-md-8">
+          <div class="row row-no-gutters">
+            <!--  class="col-md-6" -->
+            <!-- @note RC -->
+            <!-- ${Right div - widget} -->
+            <sp-widget widget="data.rtwIntroduction"></sp-widget>
+          </div>
+          <div class="row row-no-gutters">
+            <!--  <div class="col-md-4"><widget id="rto-office-status"></widget></div> -->
+            <div class="col-md-6" ng-if="data.rtwWantToReturn">
+              <sp-widget widget="data.rtwWantToReturn"></sp-widget>
+            </div>
+            <div class="col-md-6" ng-if="data.rtwImpResources">
+              <sp-widget widget="data.rtwImpResources"></sp-widget>
+            </div>
+          </div>
+        </div>
+        <!-- RC , first row -->
+
+        <br />
+
+        <br />
+      </div>
+    </div>
+
+    <div
+      id="1stTab"
+      ng-if="c.currTab == 'home'"
+      class="lower-container panel-body"
+    >
+      <div
+        class="row covid-banner-row"
+        style="margin-left: -28px; margin-right: -28px"
+      >
+        <div>
+          <!-- Banner Widget -->
+          <sp-widget widget="data.homeBanner"></sp-widget>
+        </div>
+      </div>
+
+      <div class="upper_content row custom-row">
+        <div class="col-md-6">
+          <sp-widget widget="data.shareHealthStatus"></sp-widget>
+        </div>
+        <div class="col-md-6">
+          <widget id="rto-office-status"></widget>
+          <!-- added as part of story STRY2373730 and commentwd next widget -->
+          <!--<sp-widget widget="data.returnToOfficeInfo"></sp-widget>-->
+        </div>
+      </div>
+      <br />
+
+      <div class="lower_content">
+        <div class="col-md-{{::options.columns}}" ng-if="data.resourcewidget1">
+          <sp-widget widget="data.resourcewidget1"></sp-widget>
+        </div>
+        <div class="col-md-{{::options.columns}}" ng-if="data.resourcewidget2">
+          <sp-widget widget="data.resourcewidget2"></sp-widget>
+        </div>
+        <div class="col-md-{{::options.columns}}" ng-if="data.resourcewidget3">
+          <sp-widget widget="data.resourcewidget3"></sp-widget>
+        </div>
+      </div>
+    </div>
+
+    <!-- This is my health and safety tab content -->
+    <div
+      id="3rdTab"
+      ng-if="c.currTab == 'myHealthAndSafety'"
+      class="lower-container rto-panel-body"
+    >
+      <!-- upper-container  lower-container-->
+
+      <div ng-if="c.selfReservation">
+        <div>
+          <a href="" ng-click="c.redirectToHealthSafety()"
+            >${My Health &amp; Safety}</a
+          >&nbsp;&nbsp;>&nbsp;&nbsp;${Workplace Reservation}
+          <br />
+        </div>
+
+        <div
+          class="clsReservation"
+          ng-class="{'clsReservationActive' : c.selfReservation == 'NewReservation'}"
+        >
+          <a
+            href=""
+            onclick="window.location='/health_updates?spa=1&tab=myHealthAndSafety&sys_id=671a9d6007511010e6466b6e0ad30035'"
+            >${Make a reservation}</a
+          >
+        </div>
+
+        <div
+          class="clsReservation"
+          ng-class="{'clsReservationActive' : c.selfReservation == 'MyReservation'}"
+        >
+          <!--  <a href="" ng-click="c.loadData('myreservation')">${My Reservation}</a> -->
+        </div>
+      </div>
+      <br />
+      <div ng-if="!c.selfReservation">
+        <!-- RC , STRY2373734 changes made to below widget -->
+        <sp-widget widget="data.my_health_status"></sp-widget>
+      </div>
+
+      <div ng-if="c.selfReservation == 'NewReservation'">
+        <sp-widget widget="data.my_self_report"></sp-widget>
+      </div>
+    </div>
+
+    <!-- This is work from home tab content -->
+    <div
+      id="2ndTab"
+      ng-if="c.currTab == 'workFromHome'"
+      class="lower-container rto-panel-body"
+    >
+      <div class="row">
+        <div><sp-widget widget="data.wfhIntroduction"></sp-widget></div>
+      </div>
+      <div class="row">
+        <div><sp-widget widget="data.wfhPerkAllowance"></sp-widget></div>
+      </div>
+
+      <div class="row">
+        <div class="col-xs-12 col-sm-4" style="padding-left: 0px">
+          <sp-widget widget="data.wfhItBestPractice"></sp-widget>
+        </div>
+        <div class="col-xs-12 col-sm-4" style="padding-left: 0px">
+          <sp-widget widget="data.wfhErgonomicTip"></sp-widget>
+        </div>
+        <div class="col-xs-12 col-sm-4" style="padding-left: 0px">
+          <sp-widget widget="data.wfhKeepingDataSecure"></sp-widget>
+        </div>
+      </div>
+      <div class="panel-body panel-body-lower-content" style="margin-left: 0px">
+        <div class="panel-title lower-title">
+          ${Download the ServiceNow Return to Workplace Playbook to learn more}
+        </div>
+        <a
+          class="btn btn-primary"
+          style="margin-top: 40px"
+          ng-href="https://servicenow.sharepoint.com/:b:/s/RTW/EVXIKdLvM-1HvHVOuc2Or-MBSlxE8PnogZb8A8PKVGj5vQ?e=WhnHVl"
+          target="_blank"
+          >${Download Playbook}</a
+        >
+        <img
+          src="emergency_health_playbook.svg"
+          style="float: right; margin-bottom: -28px"
+        />
+      </div>
+    </div>
+
+    <!-- This is workplace safety tab content , previously named our office -->
+    <div
+      id="4thTab"
+      ng-if="c.currTab == 'ourOffices'"
+      class="lower-container rto-panel-body"
+    >
+      <div class="panel-body panel-body-content">
+        <!-- STRY2373736 , rendering content dynamically , changed type  horizontal with video -->
+        <div>
+          <!--  class="col-md-6" -->
+          <sp-widget widget="data.workplaceSafetyIntro"></sp-widget>
+        </div>
+      </div>
+
+      <div class="panel-body panel-body-content">
+        <div class="col-md-6">
+          <h3 class="heading">{{data.ourOffice_MyWorkplace.title}}</h3>
+          <span>
+            <div
+              class="legalMessage"
+              style="text-align: justify"
+              ng-bind-html="::data.ourOffice_MyWorkplace.description"
+            ></div>
+          </span>
+        </div>
+        <div class="col-md-6">
+          <img
+            style="max-width: 100%"
+            src="{{data.ourOffice_MyWorkplace.image}}"
+          />
+        </div>
+        <!-- RC moved below section from above div block to this -->
+        <div class="col-md-6">
+          <!-- RC <h4>${*Latest phased approach}</h4> -->
+          <h4>{{data.ourOffice_latestPhase.title}}</h4>
+          <img
+            style="max-width: 100%"
+            src="{{data.ourOffice_latestPhase.image}}"
+          />
+          <div
+            class="custom-div"
+            ng-bind-html="::data.ourOffice_latestPhase.description"
+          >
+            <!-- RC ${*Phased re-opening—including percentage of staff allowed—will vary
+            by location and government guidelines. View the site status KB for
+            the latest phase for your office.} -->
+          </div>
+        </div>
+        <!-- RC , move end  -->
+      </div>
+
+      <div class="panel-title">${Safety measures}</div>
+      <div class="panel-body panel-body-content">
+        <div class="col-md-4">
+          <sp-widget widget="data.officeSafetyMeasures1"></sp-widget>
+        </div>
+        <div class="col-md-4">
+          <sp-widget widget="data.officeSafetyMeasures2"></sp-widget>
+        </div>
+        <div class="col-md-4">
+          <sp-widget widget="data.officeSafetyMeasures3"></sp-widget>
+        </div>
+      </div>
+
+      <div class="panel-title">${Seating &amp; common areas}</div>
+
+      <div class="panel-body panel-body-content">
+        <div class="col-md-6">
+          <sp-widget widget="data.expectInWorkplace1"></sp-widget>
+        </div>
+        <div class="col-md-6">
+          <sp-widget widget="data.expectInWorkplace2"></sp-widget>
+        </div>
+      </div>
+      <div class="panel-body panel-body-lower-content">
+        <div class="panel-title lower-title">
+          ${Download the ServiceNow Return to Workplace Playbook to learn more }
+        </div>
+        <a
+          class="btn btn-primary"
+          style="margin-top: 40px"
+          href="https://servicenow.sharepoint.com/:b:/s/RTW/EVXIKdLvM-1HvHVOuc2Or-MBSlxE8PnogZb8A8PKVGj5vQ?e=WhnHVl"
+          target="_blank"
+          >${Download Playbook}</a
+        >
+        <img
+          src="emergency_health_playbook.svg"
+          style="float: right; margin-bottom: -28px"
+        />
+      </div>
+    </div>
+    <!-- This is india employee tab -->
+    <div
+      id="5thTab"
+      ng-if="c.currTab == 'idcAssistance'"
+      class="lower-container rto-panel-body"
+    >
+      <div style="height: auto; overflow: auto">
+        <div class="col-md-7" style="padding-top: 20px">
+          <div class="idc_intro">
+            <div
+              class="panel-heading"
+              style="padding-left: 0px; padding-top: 0px; padding-right: 0px"
+            >
+              <h4 class="panel-title" style="padding-left: 0px">
+                {{c.data.idcAssistResourceIntro[0].title}}
+              </h4>
+            </div>
+            <div
+              class="panel-body"
+              style="
+                padding-top: 0px;
+                padding-bottom: 0px;
+                padding-left: 0px;
+                padding-right: 0px;
+              "
+            >
+              <div
+                ng-bind-html="c.data.idcAssistResourceIntro[0].description"
+                style="min-height: 160px"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-5" style="padding-top: 20px">
+          <sp-widget widget="data.shareHealthStatus"></sp-widget>
+        </div>
+      </div>
+
+      <hr style="margin-left: 15px; margin-right: 15px" />
+      <div
+        class="panel-heading"
+        style="
+          padding-left: 15px;
+          padding-right: 15px;
+          padding-top: 0px;
+          padding-bottom: 0px;
+          overflow: auto;
+          height: auto;
+        "
+      >
+        <span class="panel-title" style="padding-left: 0px">${Resources}</span>
+        <span class="slackText">
+          <span style="width: 100%"
+            >${Join }
+            <a
+              href="https://now-servicenow.slack.com/archives/C02015WEFC3"
+              target="_blank"
+              ><b>${#community-for-covid-india-support }</b></a
+            >
+            ${on Slack}
+          </span>
+          <span style="padding-left: 10px"
+            ><img
+              ng-click="c.openInNewTab('https://now-servicenow.slack.com/archives/C02015WEFC3')"
+              ng-src="slack-new-icon.svg"
+              style="width: 25px; height: 25px; cursor: pointer"
+              role="presentation"
+              src="slack-new-icon.svg"
+          /></span>
+        </span>
+      </div>
+
+      <div class="idc_resource_list" style="margin-top: 15px">
+        <div class="row" style="display: flex; flex-wrap: wrap">
+          <div
+            ng-repeat="card in data.idcAssistResource | orderBy: card.order "
+            class="col-md-3"
+            style="margin-bottom: 15px"
+          >
+            <div class="panel b idc-tab-height">
+              <div class="panel-heading">
+                <div
+                  class="col-xs-12"
+                  style="padding-left: 0px; margin-bottom: 10px"
+                >
+                  <div ng-if="!card.image">
+                    <div
+                      class="placeholderImage"
+                      style="width: 40px; height: 40px"
+                    />
+                  </div>
+                  <div ng-if="card.image">
+                    <img
+                      ng-src="{{card.image}}"
+                      style="width: 40px; height: 40px"
+                    />
+                  </div>
+                </div>
+
+                <span
+                  style="font-size: 16px; font-weight: 600; padding-top: 20px"
+                  >{{card.title}}</span
+                >
+              </div>
+              <div
+                class="innerContainer"
+                style="height: 100px; overflow: auto; line-height: 20px"
+              >
+                <div
+                  class="col-xs-12 desc-vertical-widget1"
+                  ng-bind-html="card.description"
+                  style="
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 4;
+                    -webkit-box-orient: vertical;
+                    font-size: 14px;
+                  "
+                ></div>
+              </div>
+              <div class="col-xs-12" ng-if="card.footerLink">
+                <a
+                  class=""
+                  style="color: #3b9d92"
+                  ng-href="{{card.footerLink}}"
+                  target="_blank"
+                >
+                  {{card.footerText}}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="panel-heading"
+        style="overflow: auto; padding: 0px 15px 0px 15px"
+      >
+        <span
+          class="panel-title lower-title"
+          style="padding-left: 0px; margin-top: 7px"
+        >
+          ${Quick Benefits Guide}
+        </span>
+        <span class="idc_guide_btn">
+          <a
+            class="btn btn-action btn-primary"
+            style="
+              margin-bottom: 0px;
+              margin-top: 0px;
+              height: 32px;
+              padding-top: 5px;
+            "
+            href="https://surf.service-now.com/sys_attachment.do?sys_id=24a5b456db37e450cc79474d139619ce"
+            target="_blank"
+            >${Download}</a
+          >
+        </span>
+      </div>
+      <div class="panel-body idc_quick_guide_cont">
+        <div class="col-md-7" style="padding-top: 20px; background: #f3d9d2">
+          <div>
+            <p style="font-weight: 600; font-size: 16px; line-height: 24px">
+              ${Be ready in 3 easy steps}
+            </p>
+          </div>
+          <div>
+            <div
+              class="col-md-9"
+              style="
+                padding-left: 0px;
+                padding-right: 0px;
+                padding-bottom: 20px;
+              "
+            >
+              <div
+                style="
+                  height: auto;
+                  overflow: auto;
+                  background: white;
+                  padding: 10px;
+                "
+              >
+                <div class="col-md-2" style="text-align: center">
+                  <img ng-click="c.openMfineApp()" src="mfine_icon-small.svg" />
+                </div>
+                <div
+                  class="col-md-10"
+                  style="padding-top: 10px; font-weight: 600"
+                >
+                  ${Download and Register on MFine mobile app }
+                </div>
+              </div>
+              <div
+                style="
+                  height: auto;
+                  overflow: auto;
+                  margin-top: 15px;
+                  background: white;
+                  padding: 10px;
+                  margin-bottom: 15px;
+                  padding-top: 0px;
+                "
+              >
+                <div
+                  class="col-md-2"
+                  style="text-align: center; padding-top: 10px"
+                >
+                  <img src="copyIcon.svg" style="height: 24px; width: 24px" />
+                </div>
+                <div class="col-md-10" style="padding-top: 10px">
+                  <p style="font-weight: 600">
+                    ${Keep below documents handy and scanned copies on your
+                    phone}
+                  </p>
+                  <div>
+                    <img src="checkIcon.svg" />
+                    <span
+                      >${E- Cards for Insurance from our }<a
+                        href="https://servicenow.okta.com/home/thomsonsonlinebenefits/0oa1g1v3i17DiSuob0h8/38923?fromHome=true"
+                        target="blank"
+                        style="
+                          color: #1e856d;
+                          text-decoration: underline;
+                          font-weight: 600;
+                        "
+                        >${Benefits Portal}</a
+                      >
+                    </span>
+                    <p style="padding-left: 18px; margin-top: 5px">
+                      ${Okta > ServiceNow Benefits > Quick Links > medical
+                      ecards}
+                    </p>
+                  </div>
+                  <div>
+                    <img src="checkIcon.svg" /><span>${Aadhaar Card Copy}</span>
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  height: auto;
+                  overflow: auto;
+                  background: white;
+                  padding: 10px;
+                  padding-top: 0px;
+                "
+              >
+                <div
+                  class="col-md-2"
+                  style="text-align: center; padding-top: 10px"
+                >
+                  <img src="contact_icon.svg" />
+                </div>
+                <div class="col-md-10" style="padding-top: 10px">
+                  <p style="font-weight: 600">
+                    ${Save the contact and link for Medical Assistance Covid
+                    Care questions}
+                  </p>
+                  <div>
+                    <img src="checkIcon.svg" /><span
+                      ><b>${MediAssist insurance contacts}</b></span
+                    >
+
+                    <div style="overflow: auto; height: auto">
+                      <span
+                        class="col-md-6"
+                        style="
+                          padding-top: 10px;
+                          overflow: auto;
+                          height: auto;
+                          padding-left: 18px;
+                        "
+                      >
+                        <p style="margin-bottom: 0px">
+                          <b>${MediAssist HelpDesk}</b>
+                        </p>
+                        <p style="margin-bottom: 0px">
+                          <b
+                            ><a
+                              href="mailto:servicenow@mediassist.in"
+                              target="blank"
+                              style="
+                                color: #1e856d;
+                                text-decoration: underline;
+                                font-weight: 600;
+                              "
+                              >${servicenow@mediassist.in}</a
+                            ></b
+                          >
+                        </p>
+                        <p style=""><b>${Phone: } </b> ${+91 8951386235}</p>
+                      </span>
+                      <span
+                        class="col-md-6"
+                        style="
+                          padding-top: 10px;
+                          overflow: auto;
+                          height: auto;
+                          padding-left: 18px;
+                        "
+                      >
+                        <p style="margin-bottom: 0px"><b>${Hamza Zaidi}</b></p>
+                        <p style="margin-bottom: 0px">
+                          <b
+                            ><a
+                              href="mailto:hamza.zaidi@mediassist.in"
+                              target="blank"
+                              style="
+                                color: #1e856d;
+                                text-decoration: underline;
+                                font-weight: 600;
+                              "
+                              >${hamza.zaidi@mediassist.in}</a
+                            ></b
+                          >
+                        </p>
+                        <p style=""><b>${Phone: }</b>${+91 7349122713}</p>
+                      </span>
+                    </div>
+
+                    <div>
+                      <img src="checkIcon.svg" />
+                      <span>
+                        ${MARSH COVID Support Quick Help Directory - }
+                        <a
+                          href="https://staysafeberesponsible.com/"
+                          target="blank"
+                          style="
+                            color: #1e856d;
+                            text-decoration: underline;
+                            font-weight: 600;
+                          "
+                        >
+                          ${Portal Link}
+                        </a>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3 men_womenImage">
+              <span><img src="idc_man.svg" /></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-5" style="padding-top: 20px; background: #d7e7f0">
+          <div>
+            <span style="font-weight: 600; font-size: 16px; line-height: 24px"
+              >${Get an RT-PCR test }</span
+            ><span>${(for self/dependent)}</span>
+          </div>
+          <div>
+            <div class="col-md-7" style="padding-left: 0px; padding-right: 0px">
+              <div>
+                <div
+                  style="
+                    height: auto;
+                    overflow: auto;
+                    text-align: center;
+                    margin-top: 15px;
+                    background: white;
+                    padding: 26px 10px;
+                    margin-bottom: 15px;
+                  "
+                >
+                  <div>
+                    <img
+                      ng-click="c.openMfineApp()"
+                      src="mfine_icon-small.svg"
+                      style="width: 72px; height: 72px"
+                    />
+                  </div>
+                  <div style="margin-top: 10px; font-weight: 600">
+                    <p style="margin-bottom: 0px">${Request Self test using}</p>
+                    <p>${MFine mobile App}</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div style="height: auto; overflow: auto; text-align: center">
+                  <p style="margin-bottom: 0px; font-weight: 600">
+                    {{c.orVal}}
+                  </p>
+                </div>
+              </div>
+              <div style="padding-bottom: 16px">
+                <div
+                  style="
+                    height: auto;
+                    overflow: auto;
+                    text-align: center;
+                    margin-top: 15px;
+                    background: white;
+                    padding: 35px 10px;
+                  "
+                >
+                  <div><img src="building.svg" /></div>
+                  <div style="margin-top: 10px; font-weight: 600">
+                    <p style="margin-bottom: 0px">${At any other }</p>
+                    <p>${RT-PCR Testing Centers}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-5 men_womenImage">
+              <span><img src="idc_woman.svg" /></span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="col-md-12"
+          style="
+            background: rgba(244, 244, 244, 0.5);
+            padding-top: 20px;
+            padding-bottom: 15px;
+          "
+        >
+          <div
+            class="panel-heading"
+            style="
+              padding-left: 0px;
+              padding-top: 0px;
+              height: 32px;
+              padding-right: 0px;
+              padding-bottom: 0px;
+            "
+          >
+            <span
+              class="panel-title lower-title"
+              style="padding-left: 0px; margin-top: 7px"
+            >
+              ${How does ServiceNow India Support Me?}
+            </span>
+          </div>
+          <div style="margin-top: 15px">
+            <img src="IDC_Covid_step_3.jpg" class="idc_guide_img_3" />
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="idc_resource_list"
+        style="
+          border: 1px solid #d1d6d6;
+          box-sizing: border-box;
+          border-radius: 8px;
+          margin-left: 15px;
+          margin-right: 15px;
+          margin-top: 15px;
+        "
+      >
+        <div><h3>${Local government resources (by state)}</h3></div>
+        <div style="line-height: 24px">
+          ${We have collated a list of local government resources and COVID-19
+          updates (by state) across India for your reference. The information on
+          the websites are updated at least every 2 days by the state offices so
+          please check back regularly for the latest on the situation in your
+          state.}
+        </div>
+        <div style="display: flex; flex-wrap: wrap; margin-top: 15px">
+          <span
+            ng-click="c.openInNewTab(data.idcStateWiseHelpNational[0].footerLink)"
+            class="stateCapsule"
+          >
+            <a>{{data.idcStateWiseHelpNational[0].title}}</a>
+          </span>
+          <span
+            ng-repeat="card in data.idcStateWiseHelp | orderBy: card.title "
+            ng-click="c.openInNewTab(card.footerLink)"
+            class="stateCapsule"
+          >
+            <a>{{card.title}}</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

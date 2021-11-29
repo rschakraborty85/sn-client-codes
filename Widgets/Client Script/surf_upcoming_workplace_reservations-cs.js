@@ -1,4 +1,4 @@
-api.controller = function ($rootScope) {
+api.controller = function ($rootScope, $timeout) {
   var c = this;
   c.loadMore = function () {
     c.fetching = true;
@@ -16,25 +16,27 @@ api.controller = function ($rootScope) {
   };
 
   function isReservationOrTravelRequestForToday() {
-    // console.log(
-    //   "RC function isReservationOrTravelRequestForToday data is\n" +
-    //     JSON.stringify(c.data)
-    // );
-    var todayRequests = c.data.records.filter(function (req) {
-      // console.log("RC todayRequests " + req.start + "-\t-" + c.data.today);
-      // get only date and not time
-      var startDate = req.start.toString().split(" ")[0];
-      // return req.start == c.data.today;
-      return startDate == c.data.today;
-    });
-    // console.log("RC today2 " + todayRequests);
+    if (c.data.records) {
+      var todayRequests = c.data.records.filter(function (req) {
+        // get only date and not time
+        var startDate = req.start.toString().split(" ")[0];
+        // return req.start == c.data.today;
+        // @note - compare reservation and user date both in local tz
+        return startDate == c.data.today;
+      });
+    }
+
     if (todayRequests && todayRequests.length > 0) {
-      c.markAsSelected(todayRequests[0], c.data.records);
+      // @note RC - STRY2462915 - dont run for mobile
+      if (!c.data.mobile)
+        $timeout(function () {
+          c.markAsSelected(todayRequests[0], c.data.records);
+        }, 1500);
+      // c.markAsSelected(todayRequests[0], c.data.records);
     }
   }
 
   function maybeUnselectRow(items, clickedItemSysId) {
-    //console.log("RC maybeUnselectRow items " + JSON.stringify(items));
     var selected = items.filter(function (item) {
       return item.isSelected;
     });
@@ -52,7 +54,7 @@ api.controller = function ($rootScope) {
   c.markAsSelected = function (item, items) {
     maybeUnselectRow(items, item.sys_id);
     item.isSelected = !item.isSelected;
-    // console.log("RC markAsSelected item " + JSON.stringify(item));
+
     $rootScope.$broadcast("onTravelOrReservationSelected", item);
   };
 
@@ -66,7 +68,7 @@ api.controller = function ($rootScope) {
       .then(function (response) {
         c.data = response.data;
         // @note isReservationOrTravelRequestForToday never works on load for us , always on server callback
-        // console.log("RC reservation data " + JSON.stringify(c.data));
+
         isReservationOrTravelRequestForToday();
       });
   });

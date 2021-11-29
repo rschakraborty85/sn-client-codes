@@ -237,7 +237,7 @@ SafeWorkplaceAudienceUtil.prototype = {
     var query = "user.active=true^roleIN" + roleIds;
     return this.getUsers("sys_user_has_role", query, "user");
   },
-
+ 
   getAudienceUsers: function (swaGr) {
     var users = [];
     var table = "";

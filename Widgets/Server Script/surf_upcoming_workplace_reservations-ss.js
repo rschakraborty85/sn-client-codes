@@ -4,6 +4,8 @@
   data.user_selected = false;
   var limit = options.items_per_page ? options.items_per_page : 10;
   var util = new EmployeeReadinessCoreUtil();
+  // @note RC - STRY2462915
+  data.mobile = gs.isMobile();
 
   function setUserContextAndFilterQuery(filter, queryParam) {
     if (!localInput && view == "self") {
@@ -41,20 +43,16 @@
     healthAndSafetyGr.next();
     return healthAndSafetyGr.getUniqueValue();
   }
-  // @note seems like a good function as an example for valid until research
-  function validateRequirementStatusForLocation(location, userId) {
+
+  // @note RC - added new param - start and end
+  function validateRequirementStatusForLocation(location, userId, start, end) {
     var locationRequirementStatus = util.getUnqualifiedReqResults(
       findHealthAndSafetyUser(userId),
-      location
+      location,
+      start,
+      end
     );
-    // console.log(
-    //   "RC server validateRequirementStatusForLocation \t" +
-    //     location +
-    //     "\t" +
-    //     userId +
-    //     "\n" +
-    //     JSON.stringify(locationRequirementStatus)
-    // );
+
     var status = locationRequirementStatus.every(function (req) {
       return req.requirement_cleared;
     });
@@ -72,26 +70,22 @@
       "ppe_message",
       location
     );
-    // console.log(
-    //   "RC server ; ppe msg is " + msg + "\t" + user + "\t" + location
-    // );
+
     if (msg) return msg.toString();
     return "";
   }
+
   function getMyReservations() {
     var reservationRecords = [];
     var recordCount = 0;
     //var filter = "active=true^is_parent=true^end>=" + new GlideDateTime();
     var filter = "active=true^end>=" + new GlideDateTime();
     var tableName = "sn_wsd_core_reservation";
-    // @note - filter returns is_parent which is failing the query
-    // @todo - check why
+
     filter = setUserContextAndFilterQuery(filter, "requested_for");
     if (data.user_selected) {
       var grReservation = getGlideRecord(tableName, filter, "start");
-      // console.log(
-      //   "RC grReservation rows " + grReservation.getRowCount() + "\n" + filter
-      // );
+
       while (grReservation.next()) {
         var location = grReservation.getValue("location");
         recordCount++;
@@ -104,16 +98,19 @@
           secondary_location: grReservation.getDisplayValue(
             "u_cmn_location_ref"
           ),
-          start: new GlideDateTime(grReservation.getValue("start"))
-            // .getDate()
-            .getDisplayValue(),
-          end: new GlideDateTime(grReservation.getValue("end"))
-            // .getDate()
-            .getDisplayValue(),
+          start: new GlideDateTime(
+            grReservation.getValue("start")
+          ).getDisplayValue(),
+          end: new GlideDateTime(
+            grReservation.getValue("end")
+          ).getDisplayValue(),
+
           present: grReservation.getValue("start") <= new GlideDateTime(),
           requirements_status: validateRequirementStatusForLocation(
             location,
-            data.user
+            data.user,
+            grReservation.getValue("start"),
+            grReservation.getValue("end")
           ),
           isReservation: true,
           ppe_message: getApplicablePpeMsgs(data.user, location),
@@ -174,12 +171,13 @@
   function getMyReservationsAndTravelRequests() {
     var reservations;
     var travelRequests;
+
     if (new GlidePluginManager().isActive("com.sn_wsd_core")) {
       reservations = getMyReservations();
     }
-    if (new GlidePluginManager().isActive("com.sn_imt_travel")) {
-      travelRequests = getMyTravelRequests();
-    }
+    /*if (new GlidePluginManager().isActive("com.sn_imt_travel")) {
+          travelRequests = getMyTravelRequests();
+      }*/
     var allRecords = [];
     var allCount = 0;
     if (reservations) {
@@ -190,8 +188,7 @@
       allRecords = allRecords.concat(travelRequests.records);
       allCount += travelRequests.recordCount;
     }
-    data.today = new GlideDate().getValue();
-    // console.log("RC UWR server " + data.today);
+    data.today = new GlideDate().getDisplayValue(); //@note RC - return user local date
     data.records = allRecords;
     data.count = allCount;
     if (localInput && localInput.action == "fetch_more") {
@@ -204,7 +201,6 @@
     } else {
       data.hasMore = false;
     }
-    // console.log("RC UWR server " + JSON.stringify(data));
   }
 
   getMyReservationsAndTravelRequests();
