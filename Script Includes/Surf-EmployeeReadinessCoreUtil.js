@@ -73,7 +73,8 @@ EmployeeReadinessCoreUtil.prototype = {
       var message =
         type === "employee"
           ? RequirementStatusUtil.getLocationAwareStatus(gr, location)
-          : gr.getDisplayValue("requirement_status");
+          : gr.getDisplayValue("requirements_status");
+      //gs.warn("RC visitor status "+gr.getEncodedQuery()+"\t"+message+"\t"+gr.getUniqueValue()+"\t val = "+gr.getDisplayValue("requirement_status")+"\t"+gr.getValue(""));
       var cleared = message === "Cleared";
 
       return {
@@ -186,12 +187,31 @@ EmployeeReadinessCoreUtil.prototype = {
     var startGdt = new GlideDateTime(start);
     var endGdt = new GlideDateTime(end);
     var validUntilGdt = new GlideDateTime(valid_until);
-    var duration = GlideDate.subtract(
+
+    var s_duration = GlideDate.subtract(
       endGdt.getDate(),
       validUntilGdt.getDate()
     ).getDayPart();
-
-    return duration >= 0 ? true : false;
+    if (s_duration >= 0) {
+      return true;
+    }
+    // @note - if valid until is past and end date is present or future
+    // still allows up to one hour diff
+    // e.g. today 1130 pm valid vs tomorrow 0030 am end date
+    var e_duration = GlideDateTime.subtract(validUntilGdt, endGdt);
+    var tmpGdt = new GlideDateTime(e_duration.getValue());
+    var durationInSec = tmpGdt.getNumericValue() / 1000;
+    if (
+      durationInSec <=
+      gs.getProperty(
+        "sn_imt_core.valid_until.max.allowed.diff.in_seconds",
+        3600
+      )
+    ) {
+      return true;
+    }
+    // return s_duration >= 0 ? true : false;
+    return false;
   },
   //@note RC - important - added new param - start and end
   // they are reservation data
@@ -225,6 +245,7 @@ EmployeeReadinessCoreUtil.prototype = {
       var reqActionName = "";
       var reqActionURL = "";
       var reqMobileActionURL = "";
+
       if (reqsGr.getValue("valid_until") && reqCleared) {
         validUntil = gs.getMessage("Valid until {0}", [
           this.getValidUntil(reqsGr).getDisplayValue(),

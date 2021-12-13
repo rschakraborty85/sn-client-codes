@@ -1,0 +1,248 @@
+<div class="panel">
+  <!-- Header -->
+  <div classs="pannel-header">
+    <div class="panel-title">
+      <h4 style="margin-top: 0px">
+        Reservation details
+        <!-- Overall Requirement Status -->
+        <span
+          class="pull-right label cleared"
+          style="color: #474d52; font-weight: normal"
+          ng-if="data.cleared_message == 'Cleared'"
+        >
+          <i
+            class="fa fa-circle"
+            style="color: #1e856d"
+            ng-if="data.cleared_message == 'Cleared'"
+          ></i>
+          {{data.cleared_message}}
+        </span>
+        <span
+          class="pull-right label not-cleared"
+          style="color: #474d52; font-weight: normal"
+          ng-if="data.cleared_message == 'Not Cleared'"
+        >
+          <!-- "data.cleared_message == 'Not Cleared'" -->
+          <i class="fa fa-circle" style="color: #cd3e3e"></i>
+          {{data.cleared_message}}
+        </span>
+        <!-- End of Overall Requirement status -->
+      </h4>
+    </div>
+  </div>
+  <!-- End of Header -->
+  <!-- Body -->
+  <!-- Reservation Details -->
+  <div>
+    <!--  Location -->
+    <div class="reservation_data" style="margin-left: 0px; margin-right: 0px">
+      <div class="pull-left reservation_data">
+        <span class="field-name">${Location} </span> &nbsp; &nbsp;
+        <span class="field-value"> {{ data.reservation.location }}</span>
+      </div>
+    </div>
+    <!-- End of Reservation Location -->
+    <!-- Space -->
+    <div class="reservation_data" style="margin-left: 0px; margin-right: 0px">
+      <div class="pull-left reservation_data">
+        <span class="field-name">${Space} </span>&nbsp; &nbsp;
+        <span class="field-value"> {{ data.reservation.space }}</span>
+      </div>
+    </div>
+    <!-- End of Reservation Space -->
+    <!--  Start Date -->
+    <div class="reservation_data" style="margin-left: 0px; margin-right: 0px">
+      <div class="pull-left reservation_data">
+        <span class="field-name">${Start} </span> &nbsp; &nbsp;
+        <span class="field-value"> {{ data.reservation.start}}</span>
+      </div>
+    </div>
+    <!-- End of Reservation Start Date -->
+    <!--  End Date -->
+    <div class="reservation_data" style="margin-left: 0px; margin-right: 0px">
+      <div class="pull-left reservation_data">
+        <span class="field-name">${End} </span> &nbsp; &nbsp;
+        <span class="field-value"> {{ data.reservation.end}}</span>
+      </div>
+    </div>
+    <!-- End of Reservation End Date -->
+    <!-- Reservation # -->
+    <div class="reservation_data" style="margin-left: 0px; margin-right: 0px">
+      <div class="pull-left reservation_data">
+        <span class="field-name">${Reservation Number} </span> &nbsp; &nbsp;
+        <span class="field-value"> {{ data.reservation.number }}</span>
+      </div>
+    </div>
+    <!-- End of Reservation # -->
+    <!-- PPE Message -->
+    <div
+      ng-if="data.ppe_info_message"
+      class="reservation_data"
+      style="margin-left: 0px; margin-right: 0px"
+    >
+      <div class="pull-left ppe-message reservation_data">
+        <i style="font-size: 20px">&#9888;</i>
+        <span style="padding: 5px">{{data.ppe_info_message}} </span>
+        <br />
+      </div>
+    </div>
+    <!-- End of PPE Message -->
+  </div>
+  <!-- End of Reservation Details -->
+  <hr width="100%" size="5px" />
+  <!-- Steps to Return to workplace Section -->
+  <div class="panel" style="padding-bottom: 65px; padding: 0px">
+    <!-- Header -->
+    <div class="row" ng-if="data.reqs_length > 0">
+      <h4 class="rto-status col-md-12 col-lg-12 col-sm-12 col-xs-12">
+        ${Steps to return to workplace}
+      </h4>
+    </div>
+    <!-- End of Header -->
+    <div class="safety-requirements">
+      <!-- Individual Reqirement -->
+      <div
+        class="safety-requirement"
+        style="padding-bottom: 10px; padding-top: 10px"
+        ng-repeat="req in data.reqs"
+      >
+        <div class="add-bottom-margin" style="width: 100%; margin-bottom: 10px">
+          <div class="row no-gutters" style="padding-bottom: 12px">
+            <!-- Requirement Name -->
+            <span
+              class="
+                safety-requirement-name
+                pull-left
+                col-xs-9 col-sm-9
+                nopadding
+              "
+              >{{req.requirement_name}}
+            </span>
+            <!-- End of Requirement Name -->
+            <!-- Requirement Status -->
+            <span
+              class="pull-right col-xs-3 col-sm-3 sc-field-error-label label"
+              ng-if="req.requirement_cleared"
+              style="
+                color: #474d52;
+                font-weight: normal;
+                padding-right: 2px;
+                padding-left: 2px;
+              "
+              ng-class="{'cleared' : req.requirement_cleared, 'not-cleared' : !req.requirement_cleared}"
+            >
+              Completed</span
+            >
+            <span
+              class="pull-right col-xs-3 col-sm-3 sc-field-error-label label"
+              ng-if="!req.requirement_cleared"
+              style="
+                color: #474d52;
+                font-weight: normal;
+                padding-right: 5px;
+                padding-left: 5px;
+              "
+              ng-class="{'cleared' : req.requirement_cleared, 'not-cleared' : !req.requirement_cleared}"
+            >
+              Pending</span
+            >
+            <!--End of Requirement Status -->
+          </div>
+          <!-- Requirement Action when no Requirement Valid Until -->
+          <!-- @debug -->
+
+          <div
+            style="width: 100%; margin-bottom: 0px"
+            ng-if="!req.requirement_valid_until "
+          >
+            <!-- If not Vaccine related Requirement -->
+
+            <span
+              style="padding-left: 0px"
+              ng-if="req.requirement_ref_record != data.vaccineRequirementId && req.requirement_ref_record != data.vaccineRequirementId2 && req.requirement_action_name"
+              class="row"
+            >
+              <a
+                class="
+                  safety-requirement-action-name
+                  btn btn-outline
+                  action-btn
+                "
+                aria-label="{{req.requirement_action_name}}"
+                ng-href="{{req.requirement_mobile_action_url}}"
+                alert(requirement_mobile_action_url);
+                target="_blank"
+                >{{req.requirement_action_name}}</a
+              >
+            </span>
+            <!-- If Vaccine Related Requriement -->
+            <span
+              class="row"
+              ng-repeat="vaccine_req in data.vaccine_action_list track by $index"
+              ng-if="req.requirement_ref_record == data.vaccineRequirementId || req.requirement_ref_record == data.vaccineRequirementId2"
+            >
+              <a
+                class="
+                  safety-requirement-action-name
+                  btn btn-outline
+                  action-btn
+                "
+                aria-label="{{vaccine_req.name}}"
+                href="{{(vaccine_req.url ? data.portalSuffix+vaccine_req.url : '')}}"
+                target="_blank"
+              >
+                {{vaccine_req.name}}
+              </a>
+            </span>
+          </div>
+          <!-- End of Requirement Action -->
+          <!-- Requirement Valid Until -->
+          <div
+            style="width: 100%; margin-bottom: 20px"
+            ng-if="req.requirement_valid_until"
+          >
+            <span class="col-xs-12 pull-right valid-until-date"
+              >{{req.requirement_valid_until}}</span
+            >
+          </div>
+        </div>
+        <!-- End of Requirement Valid Until-->
+      </div>
+      <!-- End of individual Requirement -->
+    </div>
+    <!-- Requirement Instruction -->
+    <div
+      ng-if="data.show_req_message"
+      class="reservation_data"
+      style="margin-left: 0px; margin-right: 0px"
+    >
+      <div class="pull-left ppe-message">
+        <i style="font-size: 20px">&#9888;</i>
+        <!-- <i class="fa fa-exclamation-triangle"></i> -->
+        <span style="padding: 5px">{{data.requirement_instruction}} </span>
+      </div>
+    </div>
+    <!-- end of Requirement Instruction -->
+
+    <a
+      class="btn col-xs-12 col-sm-12"
+      style="
+        background: #1e856d;
+        border-radius: 8px;
+        justify-content: center;
+        align-items: center;
+        padding: 11px 0px;
+        color: #ffffff;
+        align-items: center;
+        margin-bottom: 20px;
+        text-align: center;
+        margin: 10px 0px;
+      "
+      ng-href="mesp?id=wsd_reservation&reservation_id={{data.sys_id}}&mode=edit&new_reservation=false"
+      target="_blank"
+      >Update Reservation</a
+    >
+    <!-- end of Update Reservation -->
+  </div>
+</div>
+<!-- your widget template -->

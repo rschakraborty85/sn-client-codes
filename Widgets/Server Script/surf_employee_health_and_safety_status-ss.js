@@ -41,7 +41,10 @@
     data.vaccineRequirementId = gs.getProperty(
       "sn_imt_quarantine.rto_microsite_vaccine_req_id"
     );
-
+    //   @note RC - added part of DFCT0146241
+    data.vaccineRequirementId2 = gs.getProperty(
+      "covid_rtw_vaccination_requirement_sys_id_2"
+    );
     data.reportVaccinationLink = gs.getProperty(
       "sn_imt_quarantine.rto_microsite_report_vaccination_link"
     );
@@ -273,7 +276,8 @@
             location
           ); // Copied from OOB - POC2
           //var result = util.getUserReadinessStatus(data.userType, userSysId);
-
+          // @debug
+          // console.log("RC server result " + JSON.stringify(result));
           var userResult = result.user_result;
           if (userResult.error && userResult.error_message) {
             data.user_error_message = userResult.error_message;
@@ -321,15 +325,12 @@
               data.reqs = result.reqs;
               data.cleared_none = false;
               // @note RC STRY2462915 - if no requirement - show none
-              console.log(
-                "RC none check " + data.reqs.length + "\t" + data.isEhsRequired
-              );
               if (data.reqs.length == 0 && !data.isEhsRequired) {
                 data.cleared_message = "No requirement";
                 data.cleared_none = true;
                 data.cleared = false;
               }
-              // @note - RC - added for PPE msg 
+              // @note - RC - added for PPE msg
               if (data.userType === "employee") {
                 data.user_ppe_msg = getApplicablePpeMsgs(userSysId, location);
               }
@@ -343,6 +344,7 @@
                   requirement_id:'5c5ee7aa81302010fa9bcd132675a426'
                  });
              */
+              // @note RC
               for (var iReqLoop = 0; iReqLoop < data.reqs.length; iReqLoop++) {
                 if (
                   data.reqs[iReqLoop].requirement_id ==

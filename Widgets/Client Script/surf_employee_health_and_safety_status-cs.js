@@ -127,7 +127,8 @@ api.controller = function ($scope, $window, $timeout, $uibModal, cabrillo) {
         .then(function (spresponse) {
           _self.isLoading = false;
           _self.baseData = spresponse.data;
-
+          // @debug
+          // console.log("RC debug " + JSON.stringify(_self.baseData));
           // RC - visitor 2nd phase ; STRY2443341
           c.data.isEhsRequired = spresponse.data.isEhsRequired;
           c.shorten = spresponse.data.required_badge_print_data;

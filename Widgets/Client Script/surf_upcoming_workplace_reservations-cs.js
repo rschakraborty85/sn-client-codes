@@ -54,7 +54,7 @@ api.controller = function ($rootScope, $timeout) {
   c.markAsSelected = function (item, items) {
     maybeUnselectRow(items, item.sys_id);
     item.isSelected = !item.isSelected;
-
+    // console.log("RC item " + JSON.stringify(item));
     $rootScope.$broadcast("onTravelOrReservationSelected", item);
   };
 

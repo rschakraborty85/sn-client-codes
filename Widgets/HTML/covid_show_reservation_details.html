@@ -1,0 +1,198 @@
+<div class="panel" style="padding-bottom: 65px">
+  <div classs="pannel-header">
+    <div class="panel-title">
+      <h4 style="font-size: 20px">
+        ${Reservation Details for } {{data.reservation.date}}
+        <button
+          class="pull-right cross_button"
+          ng-click="closemodal()"
+          style="width: 20px"
+        >
+          &times;
+        </button>
+      </h4>
+    </div>
+  </div>
+  <div style="margin-top: 30px">
+    <div class="row" style="margin-left: 0px; margin-right: 0px">
+      <div class="pull-left">
+        <span class="field-name">${Location} </span>
+        <br />
+        <!-- @note rc DFCT0145825 -->
+        <!-- <span class="field-value"> {{ data.reservation.location }}</span> -->
+        <div class="field-value">{{ data.reservation.location_first }}</div>
+        <div class="field-value">{{ data.reservation.location_second }}</div>
+      </div>
+      <div class="pull-right">
+        <span class="field-name">${Start} </span>
+        <br />
+        <span class="field-value"> {{ data.reservation.start}}</span>
+      </div>
+    </div>
+
+    <div class="row" style="margin-left: 0px; margin-right: 0px">
+      <div class="pull-left">
+        <span class="field-name">${Space} </span>
+        <br />
+        <span class="field-value"> {{ data.reservation.space }}</span>
+      </div>
+      <div class="pull-right">
+        <span class="field-name">${End} </span>
+        <br />
+        <span class="field-value"> {{ data.reservation.end }}</span>
+      </div>
+    </div>
+
+    <div class="row" style="margin-left: 0px; margin-right: 0px">
+      <div class="pull-left">
+        <span class="field-name">${Reservation} </span>
+        <br />
+        <span class="field-value"> {{ data.reservation.number }}</span>
+      </div>
+    </div>
+
+    <div
+      ng-if="data.ppe_info_message"
+      class="row"
+      style="margin-left: 0px; margin-right: 0px"
+    >
+      <div class="pull-left ppe-message">
+        <span style="font-style: italic; padding: 5px"
+          >{{data.ppe_info_message}}
+        </span>
+        <br />
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="row"
+    ng-if="data.reqs_length > 0"
+    style="border-top: 1px solid #dbe1e7"
+  >
+    <h4 class="rto-status col-md-6 col-lg-6 col-sm-6 col-xs-6">
+      ${Return to Workplace Status}
+    </h4>
+    <span
+      class="pull-right label"
+      style="
+        margin-top: 15px;
+        margin-right: 15px;
+        color: #474d52;
+        font-weight: normal;
+      "
+      ng-class="{'cleared' : data.cleared, 'not-cleared' : !data.cleared}"
+    >
+      <i class="fa fa-circle" style="color: #cd3e3e" ng-if="!data.cleared"></i>
+      <i class="fa fa-circle" style="color: #dff0d8" ng-if="data.cleared"></i>
+      {{data.cleared_message}}
+    </span>
+  </div>
+
+  <div class="safety-requirements">
+    <div class="safety-requirement" ng-repeat="req in data.reqs">
+      <div
+        class="row"
+        style="width: 100%; margin-bottom: 10px; margin-top: 20px"
+      >
+        <span class="safety-requirement-name pull-left"
+          >{{req.requirement_name}}
+        </span>
+        <span
+          class="label sc-field-error-label pull-right req_status_span"
+          style="text-align: top"
+          ng-class="{'cleared' : req.requirement_cleared, 'not-cleared' : !req.requirement_cleared}"
+        >
+          <span
+            ng-if="req.requirement_cleared"
+            style="color: #474d52; font-weight: normal"
+            >Complete</span
+          >
+          <span
+            ng-if="!req.requirement_cleared"
+            style="color: #474d52; font-weight: normal"
+            >Pending</span
+          >
+        </span>
+      </div>
+
+      <div class="row" style="width: 100%; margin-bottom: 20px">
+        <span
+          class="col-md-6 col-lg-6 col-sm-6 col-xs-6"
+          style="padding-left: 0px"
+          ng-if="req.requirement_sys_id != data.vaccineRequirementId && req.requirement_sys_id != data.vaccineRequirementId2"
+        >
+          <a
+            class="safety-requirement-action-name pull-left"
+            ng-if="req.requirement_action_name && !c.data.mobile &&  !req.requirement_valid_until"
+            aria-label="{{req.requirement_action_name}}"
+            href="{{(req.requirement_action_url ? data.portalSuffix+req.requirement_action_url : '')}}"
+            target="_blank"
+            ng-click="c.processRequirementEvent(req)"
+          >
+            {{req.requirement_action_name}}
+          </a>
+          <a
+            class="safety-requirement-action-name"
+            ng-if="req.requirement_action_name && c.data.mobile && !c.data.inputPassed && !req.requirement_valid_until"
+            aria-label="{{req.requirement_action_name}}"
+            ng-href="{{req.requirement_mobile_action_url}}"
+            ng-click="c.captureJourneyLink('covid', 'sp_widget', 'Return To Workplace Tab - '+req.requirement_action_name)"
+          >
+            {{req.requirement_action_name}}
+          </a>
+        </span>
+        <!-- @note RC -->
+        <span
+          ng-if="req.requirement_sys_id == data.vaccineRequirementId || req.requirement_sys_id == data.vaccineRequirementId2"
+          class="vaccination_action col-xs-9 col-sm-9 col-md-9 col-lg-9"
+          style="padding-left: 0px"
+        >
+          <span
+            ng-repeat="vaccine_req in data.vaccine_action_list track by $index"
+            class="col-xs-6 col-sm-6 col-md-6 col-lg-6"
+            ng-class-even="'vaccination_action_link'"
+            ng-class-odd="'vaccination_action_odd'"
+          >
+            <a
+              class="safety-requirement-action-name"
+              style="
+                display: inline-block;
+                line-height: 22px;
+                padding-left: 0px;
+              "
+              ng-if="!req.requirement_action_name && !c.data.mobile  && !req.requirement_valid_until"
+              aria-label="{{vaccine_req.name}}"
+              href="{{(vaccine_req.url ? data.portalSuffix+vaccine_req.url : '')}}"
+              target="_blank"
+              >{{vaccine_req.name}}
+            </a>
+          </span>
+        </span>
+
+        <span
+          style="text-align: right; padding-right: 0px"
+          class="col-md-6 col-lg-6 col-sm-6 col-xs-6 pull-right"
+          ng-if="req.requirement_valid_until"
+          >{{req.requirement_valid_until}}</span
+        >
+      </div>
+
+      <!-- RC ; STRY2445567 ; turned off -->
+    </div>
+    <div class="req_clearance_message_div" ng-if="data.show_req_message">
+      <span class="req_clearance_message_text"
+        >{{data.requirement_instruction}}</span
+      >
+    </div>
+    <a
+      class="btn btn-success pull-right"
+      style="background-color: #008185; border: none; color: #fff"
+      ng-href="ws?id=wsd_reservation&reservation_id={{data.sys_id}}&mode=edit&new_reservation=false"
+      target="_blank"
+      >Update Reservation</a
+    >
+  </div>
+</div>
+
+<!-- your widget template -->
