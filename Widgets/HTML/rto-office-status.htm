@@ -1,0 +1,311 @@
+<div
+  class="panel b rto-panel"
+  ng-class="(!c.data.hasSeperator && !c.mobileScreen && data.self_reserve_user) ? 'rtw-tab-height':'' "
+>
+  <div class="panel-heading" style="background-color: rgba(216, 233, 239, 0.6)">
+    <h4 class="panel-title">{{data.title}}</h4>
+  </div>
+  <div class="panel-body standard-margin" id="innerContainer">
+    <div class="row">
+      <div
+        class="col-lg-5 col-md-5 col-sm-5 col-xs-5"
+        style="max-width: 200px; padding-left: 0px; padding-right: 0px"
+      >
+        <!-- style="width:155px;"-->
+        <div class="google-map">
+          <iframe
+            style="border: 0"
+            loading="lazy"
+            allowfullscreen
+            ng-src="{{ ::c.trustSrc(c.office.google_map) }}"
+          >
+            <!---->
+          </iframe>
+        </div>
+      </div>
+      <div
+        id="map-body"
+        class="col-lg-7 col-md-7 col-sm-7 col-xs-7"
+        ng-class="(c.data.hasSeperator && !c.mobileScreen) ? 'body-box': '' "
+        style="font-size: 13px; padding: 0px 5%"
+      >
+        <span ng-if="!data.isRemote">${ASSIGNED LOCATION}</span>
+        <span ng-if="data.isRemote">${NEAREST LOCATION}</span>
+        <br />
+        {{ ::c.office.full_address }}
+        <br />
+        <br />
+        ${OFFICE STATUS}
+        <br />
+        <span
+          style="
+            background-color: #dff0d8;
+            padding-left: 1%;
+            padding-right: 1%;
+            border-radius: 1px;
+          "
+          ng-if="c.office.status.indexOf('Open') > -1"
+          >{{ ::c.office.status }}</span
+        >
+        <span
+          style="
+            background-color: #f2dede;
+            padding-left: 1%;
+            padding-right: 1%;
+            border-radius: 1px;
+          "
+          ng-if="c.office.status.indexOf('Open') == -1"
+          >{{ ::c.office.status }}</span
+        >
+        <br />
+        <br />
+
+        <a
+          class="rto_link"
+          ng-href="https://surf.service-now.com/esc?id=surf_kb_article&number=KB0051558"
+          target="_blank"
+          ng-click="c.captureJourneyLink('covid', 'sp_widget', 'View all office statuses Link')"
+          >${View all office statuses}</a
+        >
+
+        <!-- Disabling below based on STRY2462900 -->
+        <!--  &emsp;<span
+            ng-if="c.data.hasSeperator && c.data.isRemote && !c.mobileScreen"
+            >${|}</span
+          >&emsp;
+          <a
+            ng-if="data.isRemote"
+            class="rto_link"
+            href="https://surf.service-now.com/esc?id=service_catalog&spa=1&sc_catalog=706540f4db9d1300b2e2d34b5e961919&sc_category=undefined&sc_cat_item=91fca6bcdb4db24404cef6c5ae96198f"
+            target="_blank"
+            >${Request to visit an office}</a
+          > -->
+      </div>
+    </div>
+    <div
+      ng-if="data.isRemote"
+      id="map-footer"
+      class="panel-footer panel-footer-left row"
+      ng-class="(c.data.hasSeperator && !c.mobileScreen) ? 'footer-box footer-padding': 'footer-padding-rtw' "
+      style="font-size: 12px; font-style: italic; font-weight: 600"
+    >
+      <!-- ;padding-bottom:0px;-->
+      <p>
+        ${Remote employees: You are being shown the nearest office per your
+        ServiceNow designated laptop location.}
+      </p>
+    </div>
+    <div
+      ng-if="!data.isRemote && data.page !== 'rtw'"
+      id="map-footer"
+      class="panel-footer panel-footer-left row"
+      ng-class="(c.data.hasSeperator && !c.mobileScreen) ? 'footer-box footer-padding': 'footer-padding-rtw' "
+      style="font-size: 12px; font-style: italic; font-weight: 600"
+    >
+      <!-- Disabling below statement based on STRY2462900 -->
+      <p>
+        ${Non-remote employees: If your site is open, please refer to
+        communications sent to you via email for required next steps to return.}
+      </p>
+    </div>
+    <div
+      class="row"
+      ng-if="data.self_reserve_user &&  !data.isRemote && data.reqslength && data.page == 'rtw'"
+    >
+      <h5 style="font-size: 16px">
+        ${Steps to return to your assigned office}
+      </h5>
+    </div>
+    <div>
+      <!-- @note RC -->
+      <div
+        class="row col-xs-12 cpl-sm-12 col-md-12 col-lg-12"
+        ng-if="data.self_reserve_user  && !data.isRemote && data.page == 'rtw'"
+        ng-repeat="req in data.reqs"
+        style="display: inline-block; margin-bottom: 5px; padding-left: 0px"
+      >
+        <span
+          class="fa fa-square fa-xs"
+          style="
+            color: #000000;
+            font-size: 4px;
+            vertical-align: middle;
+            padding-bottom: 2px;
+          "
+        ></span>
+        <span style="padding-left: 5px">
+          {{req.requirement_name}} &nbsp;&nbsp;
+        </span>
+      </div>
+    </div>
+    <!-- @note RC STRY2470061 -->
+    <div
+      class="row req_clearance_message_div"
+      ng-if="data.hasreq && data.page == 'rtw'"
+    >
+      <img src="ExclamationIcon.gif" width="24" height="24" />
+      <span class="req_clearance_message_text">
+        {{data.requirement_instruction}}</span
+      >
+    </div>
+    <div class="row">
+      <div class="col-xs-12" style="padding-left: 0px; padding-right: 0px">
+        <div>
+          <p
+            class="alert alert-info ng-binding"
+            style="
+              padding: 6px;
+              margin-left: auto;
+              margin-right: auto;
+              margin-bottom: 0px;
+              font-style: italic;
+              color: #666;
+              font-weight: 600;
+              font-size: 12px;
+            "
+            role="alert"
+            ng-show="c.locationError"
+            aria-hidden="false"
+          >
+            {{c.locationError}}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="panel-body"
+    ng-if="data.self_reserve_user  && data.page == 'rtw'"
+    style="padding-bottom: 10px"
+  >
+    <div class="row">
+      <div
+        class="col-xs-8 col-sm-8 col-md-8 col-lg-8"
+        style="padding-left: 0px"
+      >
+        <h4>${Upcoming Reservations}</h4>
+      </div>
+      <div
+        class="col-xs-4 col-sm-4 col-md-4 col-lg-4"
+        style="padding-left: 0px; padding-right: 15px"
+      >
+        <a
+          class="rto_link pull-right"
+          style="
+            margin-top: 10px;
+            margin-bottom: 10px;
+            text-decoration: underline;
+          "
+          ng-if="data.hasReservation"
+          ng-href="/ws?id=wsd_search"
+          target="_blank"
+          >${Make Reservations}</a
+        >
+      </div>
+    </div>
+
+    <div class="row">
+      <table class="table" style="margin-bottom: 0px">
+        <thead>
+          <th class="table-header">${Reservation Date}</th>
+          <th class="table-header">${Status}</th>
+          <th class="table-header" style="text-align: right">${Details}</th>
+        </thead>
+        <tbody>
+          <tr colspan="3" ng-if="!data.hasReservation">
+            <td style="padding-top: 30px; padding-bottom: 0px">
+              <div class="user-status" style="padding-bottom: 20px">
+                <span
+                  style="
+                    color: #293e40;
+                    text-decoration: italic;
+                    font-weight: 400;
+                  "
+                >
+                  ${You have no reservation(s) at this time}</span
+                >
+              </div>
+            </td>
+          </tr>
+
+          <tr ng-repeat="reservation in data.reservations">
+            <td>{{reservation.start}}</td>
+            <td>
+              <div class="user-status">
+                <span
+                  style="font-weight: normal"
+                  class="label sc-field-error-label req-status-span"
+                  ng-class="{'cleared' : reservation.cleared == 'yes', 'not-cleared' : reservation.cleared == 'no','no-requirement' : reservation.cleared == 'no_requirement'}"
+                >
+                  <i
+                    ng-if="reservation.cleared == 'yes'"
+                    class="fa fa-circle"
+                    style="color: #1e856d"
+                  ></i>
+                  <i
+                    ng-if="reservation.cleared == 'no'"
+                    class="fa fa-circle"
+                    style="color: #cd3e3e"
+                  ></i>
+                  {{reservation.status}}
+                </span>
+              </div>
+            </td>
+            <td>
+              <a
+                class="rto_link pull-right"
+                style="text-align: right"
+                href=""
+                ng-click="c.showdetails(reservation.table,reservation.sys_id)"
+                >${View Details}</a
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!--  <div
+    
+    class="panel-footer"
+    ng-class="(c.data.hasSeperator && !c.mobileScreen) ? 'footer-box footer-padding': 'footer-padding-rtw' "
+    style="font-size: 12px; font-style: italic; font-weight: 600;padding-bottom:25px;background-color:#ffffff"
+  >
+     <a
+            class="rto_link pull-right" style="text-decoration:underline;margin-top:5px;margin-bottom:15px;"
+            ng-href="/ws?id=wsd_reservations"
+            >${View Reservations}</a
+          >
+    
+  </div> -->
+  <div
+    class="panel-body"
+    style="padding-right: 30px; padding-bottom: 30px; padding-top: 30px"
+    ng-if="data.page == 'rtw' && data.self_reserve_user"
+  >
+    <a
+      class="pull-right align-middle"
+      ng-if="!data.hasReservation"
+      href="/ws?id=wsd_search"
+      target="_blank"
+      style="text-decoration: underline"
+      >${Make Reservations}</a
+    >
+    <!--  <a
+         ng-if="!c.data.hideThingsForShiftUser"
+         href="?id=ehs_action_redirect_page&catalog_item_sys_id_bkup=5f9078e4db532c5058e3250913961921"
+         target="_blank"
+         style="float: left"
+         >${Reserve your workspace}</a
+        > -->
+    <a
+      class="pull-right align-middle"
+      ng-if="data.hasReservation"
+      href="/ws?id=wsd_reservations"
+      target="_blank"
+      style="text-decoration: underline"
+      >${View Reservations}</a
+    >
+  </div>
+</div>

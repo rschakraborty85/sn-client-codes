@@ -1,13 +1,15 @@
 (function () {
   // RC - manager widget check
   data.isManager = false;
+  // console.log('comes here');
+
   var userGr = new GlideRecord("sys_user");
   userGr.addEncodedQuery("managerDYNAMIC90d1921e5f510100a9ad2572f2b477fe");
   userGr.query();
   if (userGr.hasNext()) {
     data.isManager = true;
   }
-
+  // console.log('comes here 2 ');
   var grEmployee = new GlideRecord("u_employee");
   grEmployee.addEncodedQuery(
     "active=true^emailENDSWITH@servicenow.com^u_employee_type!=^sys_id=" +
@@ -26,7 +28,7 @@
   ) {
     if (IsEnabledSelfReserve()) {
       if (input && input.cancelRequest) {
-        //console.log('hi');
+        //// console.log('hi');
         var wprId = input.cancelRequest;
         var wpr_gr = new sn_wsd_core.selfReserveUtil_WSM();
         wpr_gr.cancelWPRRequest(wprId);
@@ -63,7 +65,7 @@
     widget_type: "wfh_resources",
     color: "panel-wfh",
   });
-
+  // console.log('comes here 2');
   if (gs.hasRole("manager_success_center_can_read")) {
     data.resourcewidget3 = $sp.getWidget("emergency-resource-widget-util", {
       title: "Manager resources",
@@ -79,7 +81,7 @@
     rec_sys_id: options.workplaceSafetyIntro,
   });
   // RC - new intro , rtw tab
-  // @note RC - added zero top
+  // @note RC
   data.rtwIntroduction = $sp.getWidget("rto-resource-util", {
     rec_sys_id: options.rtwIntroduction,
     show_larger_video: "true",
@@ -184,6 +186,7 @@
 
   data.homeBanner = $sp.getWidget("covid-banner");
 
+  // console.log('comes here 2');
   function buildContent(sys_id) {
     var gr = new GlideRecord("sn_imt_quarantine_covid_19_resources");
     if (gr.get(sys_id)) {
@@ -223,6 +226,7 @@
   }
   loadIntro();
   loadIDCAssitanceTab();
+  // console.log('comes here before load statewise');
   loadStateWiseCovidHelp();
 
   function loadIDCAssitanceTab() {
@@ -248,7 +252,7 @@
       obj.alignmentType = "vertical_widget_1";
       data.idcAssistResource.push(obj);
     }
-    // 	  console.log("IDC assist data.idcAssistResource: " + JSON.stringify(data.idcAssistResource));
+    // 	  // console.log("IDC assist data.idcAssistResource: " + JSON.stringify(data.idcAssistResource));
   }
   function loadIntro() {
     var grOfficeSafety = new GlideRecord(
@@ -298,6 +302,6 @@
         data.idcStateWiseHelp.push(obj);
       }
     }
-    // 	  console.log("IDC assist data.idcAssistResource: " + JSON.stringify(data.idcAssistResource));
+    // console.log("IDC assist data.idcAssistResource: " + JSON.stringify(data.idcAssistResource));
   }
 })();

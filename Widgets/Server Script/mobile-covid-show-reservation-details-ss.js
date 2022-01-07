@@ -117,9 +117,9 @@
       data.cleared = true;
       data.cleared_message = "No Requirement";
     }
-    gs.warn(
-      "RC requirement_result_set\n" + JSON.stringify(requirement_result_set)
-    );
+    // gs.warn(
+    //   "RC requirement_result_set\n" + JSON.stringify(requirement_result_set)
+    // );
     while (i < requirement_result_set.length) {
       if (!requirement_result_set[i].requirement_cleared) {
         data.cleared = false;

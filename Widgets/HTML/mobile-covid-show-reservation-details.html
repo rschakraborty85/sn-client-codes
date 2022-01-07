@@ -38,7 +38,9 @@
     <div class="reservation_data" style="margin-left: 0px; margin-right: 0px">
       <div class="pull-left reservation_data">
         <span class="field-name">${Location} </span> &nbsp; &nbsp;
-        <span class="field-value"> {{ data.reservation.location }}</span>
+        <!-- @note RC -->
+        <span class="field-value"> {{ data.reservation.location_first }}</span>
+        <span class="field-value"> {{ data.reservation.location_second }}</span>
       </div>
     </div>
     <!-- End of Reservation Location -->
@@ -80,8 +82,10 @@
       class="reservation_data"
       style="margin-left: 0px; margin-right: 0px"
     >
+      <!-- @note RC -->
       <div class="pull-left ppe-message reservation_data">
-        <i style="font-size: 20px">&#9888;</i>
+        <!-- <i style="font-size: 20px">&#9888;</i> -->
+        <img src="Warning_Circle.png" />
         <span style="padding: 5px">{{data.ppe_info_message}} </span>
         <br />
       </div>
@@ -216,9 +220,11 @@
       class="reservation_data"
       style="margin-left: 0px; margin-right: 0px"
     >
+      <!-- @note RC -->
       <div class="pull-left ppe-message">
-        <i style="font-size: 20px">&#9888;</i>
+        <!-- <i style="font-size: 20px">&#9888;</i> -->
         <!-- <i class="fa fa-exclamation-triangle"></i> -->
+        <img src="Warning_Circle.png" />
         <span style="padding: 5px">{{data.requirement_instruction}} </span>
       </div>
     </div>

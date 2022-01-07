@@ -3,7 +3,7 @@
  * Reservable search provider - handle search execution to target Rest Api endpoints
  * custom type definitions can be found at the bottom of the file.
  * */
- function wsdReservableSearch($http) {
+function wsdReservableSearch($http) {
   var RESERVABLE_SEARCH_BASE_URL = "/api/sn_wsd_rsv/search/reservable";
   var RESERVABLE_AVAILABLITY_BASE_URL = "/api/sn_wsd_rsv/search/availability";
   var RESERVABLE_MODULE_BASE_URL = "/api/sn_wsd_rsv/reservable_module/";
@@ -105,10 +105,9 @@
     if (requestObj.next_item_index)
       url += "&next_item_index=" + requestObj.next_item_index;
 
-	//STRY2456995:Workspace Search Changes - Workplace Reservation Management  
-    if (requestObj.is_load)
-      url += "&is_load=true";
-  
+    //STRY2456995:Workspace Search Changes - Workplace Reservation Management
+    if (requestObj.is_load) url += "&is_load=true";
+
     if (requestObj.mode === "edit") {
       url += "&reservation_ids=" + requestObj.reservation_ids;
       url += "&reserved_reservables=" + requestObj.reserved_reservables;
@@ -167,7 +166,6 @@
     checkReservablesAvailabilities: checkReservablesAvailabilities,
     checkExistingReservation: checkExistingReservation,
     getSuggestedSeat: getSuggestedSeat,
-
   };
 
   /**

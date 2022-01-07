@@ -1,0 +1,47 @@
+<div>
+  <!-- your widget template -->
+  <!-- aria-label="Test" 
+    ng-model-options="{getterSetter: true}"
+    sn-include-time="false"
+    sn-disabled="false"
+    
+-->
+  <a href="javascript:void(0)" class="button" ng-click="c.addRow()">Add Row</a>
+  <table class="table table-bordered">
+    <th>ROW</th>
+    <th>Date Administered</th>
+    <th>Type</th>
+
+    <tr ng-repeat="row in c.counter track by $index">
+      <td>{{row}}</td>
+      <td>
+        <span>
+          <!-- ['_'+$index] -->
+          <sp-date-picker
+            id="testDatePicker{{$index}}"
+            style="position: relative !important"
+            class="reference"
+            name="datePickerArr{{$index}}"
+            field="c.datePickerArr[$index]"
+            ng-change="c.selectDate($index)"
+            ng-model="c.datePickerArr[$index].value"
+          ></sp-date-picker>
+        </span>
+      </td>
+      <td>
+        <span>
+          <sn-choice-list
+            field="c.vaccineChoicesArr[$index]"
+            sn-model="c.vaccineChoicesArr[$index]"
+            sn-options="c.choiceOptions"
+            sn-value-field="value"
+            sn-text-field="display"
+            sn-items="c.vaccineChoicesItems"
+            sn-on-change="c.valueSelectedType(selectedValue,$index)"
+          >
+          </sn-choice-list>
+        </span>
+      </td>
+    </tr>
+  </table>
+</div>

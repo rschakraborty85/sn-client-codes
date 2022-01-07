@@ -16,43 +16,46 @@ WSDReservableModuleService.prototype = Object.extendsObject(
 
       if (!this.isValidReservableModuleGr(moduleGr)) return null;
       //gs.info("RC module max day value " + moduleGr.getValue("max_days_in_future"));
-      try {
-        return {
-          sys_id: moduleSysId,
-          display_value: moduleGr.getDisplayValue(),
-          name: moduleGr.getValue("name"), // on frontend we use name as display
-          apply_to_shift: WSDUtils.safeBool(
-            moduleGr.getValue("apply_to_shift")
-          ),
-          allow_multi_select: moduleGr.u_allow_multi_select.getDisplayValue(), // RC
-          filter_has_select_seat: this._checkFilterHasSelectSeat(moduleGr), // RC
-          max_days_in_future: moduleGr.getValue("max_days_in_future"), // RC
-          reserve_module_msg: gs.getMessage("reserve_mod_max_days", [
-            moduleGr.getValue("max_days_in_future"),
-          ]),
-        };
-      } catch (error) {
-        gs.error("Error in getReservableModuleAsChoiceById function3 " + error);
-      }
+      // @note RC - STRY2469789
+      if (
+        // moduleSysId ==
+        // gs.getProperty("sn_wsd_rsv.neighborhood.workspace.sys_id")
+        gs
+          .getProperty("sn_wsd_rsv.neighborhood.workspace.sys_id")
+          .split(",")
+          .indexOf(moduleGr.sys_id + "") > -1
+      )
+        var extraWord = " neighborhood ";
+      else extraWord = " ";
+
+      return {
+        sys_id: moduleSysId,
+        display_value: moduleGr.getDisplayValue(),
+        name: moduleGr.getValue("name"), // on frontend we use name as display
+        apply_to_shift: WSDUtils.safeBool(moduleGr.getValue("apply_to_shift")),
+        allow_multi_select: moduleGr.u_allow_multi_select.getDisplayValue(), // RC
+        filter_has_select_seat: this._checkFilterHasSelectSeat(moduleGr), // RC
+        max_days_in_future: moduleGr.getValue("max_days_in_future"), // RC
+        reserve_module_msg: gs.getMessage("reserve_mod_max_days", [
+          moduleGr.getValue("max_days_in_future"),
+          extraWord,
+        ]),
+      };
     },
     // RC - added new functions
     _checkFilterHasSelectSeat: function (moduleGr) {
-      try {
-        if (moduleGr.reservable_filter) {
-          if (
-            moduleGr.reservable_filter.indexOf("area.u_select_seat=true") > -1
-          ) {
-            return "true";
-          } else if (
-            moduleGr.reservable_filter.indexOf("area.u_select_seat=false") > -1
-          ) {
-            return "false";
-          } else return "";
-        }
-        return "";
-      } catch (error) {
-        gs.error("Error in _checkFilterHasSelectSeat function " + error);
+      if (moduleGr.reservable_filter) {
+        if (
+          moduleGr.reservable_filter.indexOf("area.u_select_seat=true") > -1
+        ) {
+          return "true";
+        } else if (
+          moduleGr.reservable_filter.indexOf("area.u_select_seat=false") > -1
+        ) {
+          return "false";
+        } else return "";
       }
+      return "";
     },
     getBuildingQueryBasedOnReservMod: function (reservableModuleSysID) {
       try {
@@ -141,8 +144,9 @@ WSDReservableModuleService.prototype = Object.extendsObject(
         // workplace location
         reservableModule.reservable_columns =
           WSDConstants.TABLES.WorkplaceLocation.columns;
-        reservableModule.layout_mapping =
-          this._constructLayoutMappingForLocation(selectionType);
+        reservableModule.layout_mapping = this._constructLayoutMappingForLocation(
+          selectionType
+        );
         // RC - changed
         var sysids = this.getBuildingQueryBasedOnReservMod(
           reservableModuleGr.sys_id
@@ -153,10 +157,26 @@ WSDReservableModuleService.prototype = Object.extendsObject(
         // configuration item
         reservableModule.reservable_columns =
           WSDConstants.TABLES.ConfigurationItem.columns;
-        reservableModule.layout_mapping =
-          this._constructLayoutMappingForCI(selectionType);
+        reservableModule.layout_mapping = this._constructLayoutMappingForCI(
+          selectionType
+        );
       }
+      // @note RC - STRY2469789
+      if (
+        // reservableModuleGr.sys_id ==
+        // gs.getProperty("sn_wsd_rsv.neighborhood.workspace.sys_id")
+        gs
+          .getProperty("sn_wsd_rsv.neighborhood.workspace.sys_id")
+          .split(",")
+          .indexOf(reservableModuleGr.sys_id + "") > -1
+      )
+        var extraWord = " neighborhood ";
+      else extraWord = " ";
 
+      reservableModule.reserve_module_msg = gs.getMessage(
+        "reserve_mod_max_days",
+        [reservableModuleGr.getValue("max_days_in_future"), extraWord]
+      );
       return reservableModule;
     },
 
