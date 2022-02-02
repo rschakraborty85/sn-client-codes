@@ -1,8 +1,8 @@
-/** wsdUtils - Service function
+/** RC - merged with oob ; wsdUtils - Service function
  * wsd utility class that offers front-end helper methods
  * @param {spUtil} spUtil - service portal utils
  */
-function wsdUtils(spUtil, $location) {
+ function wsdUtils(spUtil, $location) {
   var timeFormat = "HH:mm:ss";
   var timeFormatSimple = "HH:mm";
   var dateFormat = "YYYY-MM-DD";
@@ -24,7 +24,42 @@ function wsdUtils(spUtil, $location) {
     dateTimeSimpleFormat = dateFormat + " " + timeFormatSimple;
     userTimeZone = moment().tz();
   })();
+  /**
+   * get user instance timezone used by momentJs. In case the TZ is not supported, fall back to the equivalent known timezone. Example IST is equivalent to
+   * @returns {string}
+   * @private
+   */
+  function _resolveAndGetUserTimezone() {
+    var userTimeZone = moment().tz();
+    var momentTzResetNeeded = false;
+    if (!userTimeZone) {
+      console.warn(
+        "The selected user timezone is not supported by MomentJs Timezone, falling back to equivalent suitable TZ..."
+      );
+      userTimeZone = window.g_tz;
+      momentTzResetNeeded = true;
+    }
 
+    switch (userTimeZone) {
+      case "IST":
+        userTimeZone = "Asia/Kolkata";
+        break;
+      default:
+        break;
+    }
+
+    if (!userTimeZone)
+      console.error(
+        "The selected user timezone is not supported and can not be retrieved. This might cause functionality instability"
+      );
+
+    if (momentTzResetNeeded && userTimeZone) {
+      console.debug("MomentJs is set to fallback timezone: ", userTimeZone);
+      moment.tz.setDefault(userTimeZone);
+    }
+
+    return userTimeZone;
+  }
   /**
    * check if the user's setting timezone (initialized in moment) are different from local machine timezone
    * The time-zone offset is the difference, in minutes, between UTC and local time.
@@ -37,6 +72,15 @@ function wsdUtils(spUtil, $location) {
     // when timezone is the same, the 2 above variable are expect to be the exact opposite
 
     return userServerSettingTimeZoneOffset !== userClientTimeZoneOffset * -1;
+  }
+  /**
+   * Get the users time zone (e.g., Europe/Amsterdam, US/Pacific)
+   * @return {string}
+   */
+  function getUserTimeZone() {
+    if (userTimeZone) return userTimeZone;
+
+    return window.g_tz || "${No time zone found}";
   }
 
   /**
@@ -96,7 +140,31 @@ function wsdUtils(spUtil, $location) {
 
     return dateTime.tz(userTimeZone).format(dateFormat);
   }
+  /**
+   * Get a date in the user's format
+   * @param {string} date - date string, which can deviate from known formats
+   * @param {string} format - the format for the date supplied (e.g., YYYY-MM-DD, MM.DD.YYYY)
+   * @return {string}
+   */
+  function getCustomDateInFormat(date, format) {
+    if (!date || !format) return "";
 
+    return moment(date, format).format(dateFormat);
+  }
+
+  /**
+   * Get the date in the internal format 'YYYY-MM-DD'
+   * RC - removed internalDateFormat - has some error
+   * @param {Moment|string} dateTime
+   * @return {string}
+   */
+  function getDateInInternalFormat(dateTime) {
+    if (!dateTime) return "";
+    else if (typeof dateTime === "string")
+      return moment.utc(dateTime).tz(userTimeZone).format(); //internalDateFormat
+
+    return dateTime.tz(userTimeZone).format(); //internalDateFormat
+  }
   /**
    * For a user formatted datetime, returns the date
    * @param {string} dateTime
@@ -132,14 +200,8 @@ function wsdUtils(spUtil, $location) {
    * @return {string} humanized text, e.g., '1 hour', '30 minutes'
    */
   function getHumanizedTimeDuration(start, end) {
-    //console.log("RC wsdUtils start " + start + " " + end);
     var durationInMinutes = moment(end).diff(moment(start)) / 1000 / 60;
-    //     console.log(
-    //       "RC wsdUtils durationInMinutes " +
-    //         durationInMinutes +
-    //         " " +
-    //         (durationInMinutes % 60)
-    //     );
+
     if (!durationInMinutes || durationInMinutes < 0) return "-";
     var durationInHours =
       durationInMinutes / 60 >= 24 ? durationInMinutes / 60 : 0;
@@ -164,23 +226,49 @@ function wsdUtils(spUtil, $location) {
         return formatString("{0} {1}", durationInHours, "${hours}");
       case durationInMinutes > 60:
         var time = moment("1970-01-01 00:00:00");
+        var baseLineTime = moment("1970-01-01 00:00:00"); // used to calculate days later
+
         time.minutes(durationInMinutes);
-        //         console.log("RC wsdUtils in mins " + time.format(dateTimeFormat));
+        var days = time.diff(baseLineTime, "days");
+
         var minuteLabel = time.minute() === 1 ? "${minute}" : "${minutes}";
-        //         console.log("RC wsdUtils in time.minute() " + time.minute());
         var hourLabel = time.hour() === 1 ? "${hour}" : "${hours}";
-        //         console.log("RC wsdUtils in time.hour() " + time.hour());
+        var dayLabel = days === 1 ? "${day}" : "${days}";
+        if (days < 1) {
+          // if its on the first of 1970
+          // if no minutes are given return hour format
+          if (time.minute() === 0)
+            return formatString("{0} {1}", time.hour(), hourLabel);
 
-        if (time.minute() === 0)
-          return formatString("{0} {1}", time.hour(), hourLabel);
-
-        return formatString(
-          "{0} {1} {2} {3}",
-          time.hour(),
-          hourLabel,
-          time.minute(),
-          minuteLabel
-        );
+          // hour and minute format
+          return formatString(
+            "{0} {1} {2} {3}",
+            time.hour(),
+            hourLabel,
+            time.minute(),
+            minuteLabel
+          );
+        } else {
+          // if its minutes flat, just show day and hour
+          if (time.minute() === 0)
+            return formatString(
+              "{0} {1} {2} {3}",
+              days,
+              dayLabel,
+              time.hour(),
+              hourLabel
+            );
+          // if everything is given return day hour minute
+          return formatString(
+            "{0} {1} {2} {3} {4} {5}",
+            days,
+            dayLabel,
+            time.hour(),
+            hourLabel,
+            time.minute(),
+            minuteLabel
+          );
+        }
       default:
         return "-";
     }
@@ -270,10 +358,13 @@ function wsdUtils(spUtil, $location) {
    * @param {string} endDate - Date string.
    * @returns {string}
    */
-  function formatReservationDate(startDate, endDate) {
-    var formattedDates =
-      getDateTimeInFormat(startDate) + " - " + getDateTimeInFormat(endDate);
-    return formattedDates;
+  function formatReservationDate(startDate, endDate, showTime) {
+    var dateTimeFunc = !showTime ? getDateTimeInFormat : getTimeFromDate;
+    return formatString(
+      "{0} - {1}",
+      dateTimeFunc(startDate),
+      dateTimeFunc(endDate)
+    );
   }
 
   /**
@@ -332,7 +423,25 @@ function wsdUtils(spUtil, $location) {
   function removeTzFromString(str) {
     return str.replace(/T/, " ").replace(/Z/, "");
   }
+  /**
+   * Construct a label for a reservable containing the full availability on a single day
+   * @param {[number[]]} availableTimes
+   * @returns {string}
+   */
+  function constructAvailabilityLabel(availableTimes) {
+    if (!arrayHasElement(availableTimes)) return "";
 
+    return availableTimes.reduce(function (acc, current, index) {
+      var label = formatString(
+        "{0} ${and} {1}",
+        getTimeFromDate(current[0]),
+        getTimeFromDate(current[1])
+      );
+      if (index < availableTimes.length - 1) label += ", ";
+
+      return (acc += label);
+    }, "");
+  }
   /**
    *
    * @param {object} obj - key value pairs that should be turned into an url friendly string
@@ -425,7 +534,15 @@ function wsdUtils(spUtil, $location) {
 
     return arr.length > 0;
   }
-
+  /**
+   * Check for actual boolean
+   * @param {string|boolean}
+   * @return {boolean}
+   */
+  function safeBool(val) {
+    val = String(val).toLowerCase().trim();
+    return val === "1" || val === "true";
+  }
   /**
    * Opens the page providede, and applies the query onto the url.
    * @param {string} pageId
@@ -548,7 +665,95 @@ function wsdUtils(spUtil, $location) {
   function filterAddedServices(service) {
     return !service.cancelFlag;
   }
+  /**
+   * Construct a location string containg information about the location hierarchy
+   * By default it will contain the floor, building and campus names
+   * @param {Object} reservable
+   * @param {Array} [fields]
+   * @return {string}
+   */
+  function constructLocStr(reservable, fields) {
+    if (!reservable) return "";
 
+    var locFields = arrayHasElement(fields)
+      ? fields
+      : ["floor", "building", "campus"];
+    var locNames = locFields.reduce(function (acc, current) {
+      if (reservable[current] && reservable[current].display_value)
+        acc.push(reservable[current].display_value);
+
+      return acc;
+    }, []);
+
+    return locNames.join(", ") || "-";
+  }
+
+  /**
+   * Construct a list of labels for the provided item (location hierarchy, capacity, purposes, services)
+   * @param {Object} reservable
+   * @param {Object} translations
+   * @returns {string[]}
+   */
+  function constructItemLabels(reservable, translations) {
+    if (!reservable || !translations) return [];
+
+    var labels = [];
+
+    // location hierarchy label
+    var locStr = constructLocStr(reservable);
+    if (locStr) labels.push(locStr);
+
+    // capacity label
+    var reservableCapacity =
+      reservable.capacity && !isNaN(reservable.capacity)
+        ? parseInt(reservable.capacity, 10)
+        : -1;
+    if (reservableCapacity > 0)
+      labels.push(
+        formatString(translations.capacity, String(reservableCapacity))
+      );
+
+    // purposes label
+    var reservablePurposeNames = arrayHasElement(reservable.reservable_purposes)
+      ? reservable.reservable_purposes.map(function (reservablePurpose) {
+          return reservablePurpose.name;
+        })
+      : [];
+    if (arrayHasElement(reservablePurposeNames))
+      labels.push(
+        formatString(translations.purposes, reservablePurposeNames.join(", "))
+      );
+
+    // services label
+    var reservableServiceNames = arrayHasElement(reservable.standard_services)
+      ? reservable.standard_services.map(function (reservableStandardService) {
+          return reservableStandardService.name;
+        })
+      : [];
+    if (arrayHasElement(reservableServiceNames))
+      labels.push(
+        formatString(translations.services, reservableServiceNames.join(", "))
+      );
+
+    return labels;
+  }
+
+  /**
+   * Gets the first view option which is flagged as default, in no default first index is returned.
+   * @param {ReservableView[]} viewOptions - The view options from which to get the default.
+   * @returns {ReservableView || null} - A default reservable view.
+   * @private
+   */
+  function getDefaultReservableView(viewOptions) {
+    if (!arrayHasElement(viewOptions)) return null;
+
+    for (var i = 0; i < viewOptions.length; i++) {
+      if (viewOptions[i].isDefault) {
+        return viewOptions[i];
+      }
+    }
+    return viewOptions[0];
+  }
   return {
     getTimeFormat: getTimeFormat,
     getSimpleTimeFormat: getSimpleTimeFormat,
@@ -556,21 +761,26 @@ function wsdUtils(spUtil, $location) {
     getDateTimeFormat: getDateTimeFormat,
     getDateTimeInFormat: getDateTimeInFormat,
     getDateInFormat: getDateInFormat,
+    getDateInInternalFormat: getDateInInternalFormat,
     getDateFromFormattedDateTime: getDateFromFormattedDateTime,
     getDateTimeInUtc: getDateTimeInUtc,
     getTimeInUtcFromMoment: getTimeInUtcFromMoment,
+    getCustomDateInFormat: getCustomDateInFormat,
     getHumanizedTimeDuration: getHumanizedTimeDuration,
+    getUserTimeZone: getUserTimeZone,
     isDateInThePast: isDateInThePast,
     formatReservationDate: formatReservationDate,
     formatTimeFromNow: formatTimeFromNow,
     roundUpDateTime: roundUpDateTime,
     removeTzFromString: removeTzFromString,
+    constructAvailabilityLabel: constructAvailabilityLabel,
     queryObjectToString: queryObjectToString,
     createRedirectUrl: createRedirectUrl,
     formatString: formatString,
     mapFieldsToString: mapFieldsToString,
     mapFieldsToArray: mapFieldsToArray,
     arrayHasElement: arrayHasElement,
+    safeBool: safeBool,
     openPage: openPage,
     resolveDataToStringValuesOrIcons: resolveDataToStringValuesOrIcons,
     resolveListIntoStr: resolveListIntoStr,
@@ -584,6 +794,9 @@ function wsdUtils(spUtil, $location) {
     setTimeToMomentObj: setTimeToMomentObj,
     generateGUID: generateGUID,
     filterAddedServices: filterAddedServices,
+    constructLocStr: constructLocStr,
+    constructItemLabels: constructItemLabels,
+    getDefaultReservableView: getDefaultReservableView,
   };
 }
 /** wsdUtils - helper provider */

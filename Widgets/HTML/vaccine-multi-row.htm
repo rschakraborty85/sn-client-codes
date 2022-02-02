@@ -10,34 +10,53 @@
   <table class="table table-bordered">
     <th>ROW</th>
     <th>Date Administered</th>
-    <th>Type</th>
+    <th>Status</th>
+    <th>Vaccine</th>
 
     <tr ng-repeat="row in c.counter track by $index">
       <td>{{row}}</td>
+      <!-- @note Administered Date Picker -->
       <td>
         <span>
           <!-- ['_'+$index] -->
           <sp-date-picker
-            id="testDatePicker{{$index}}"
+            id="datePickerArr[$index"
             style="position: relative !important"
             class="reference"
-            name="datePickerArr{{$index}}"
+            name="datePickerArr[$index]"
             field="c.datePickerArr[$index]"
             ng-change="c.selectDate($index)"
             ng-model="c.datePickerArr[$index].value"
           ></sp-date-picker>
         </span>
       </td>
+      <!-- @note Vaccine Status List -->
       <td>
         <span>
           <sn-choice-list
             field="c.vaccineChoicesArr[$index]"
-            sn-model="c.vaccineChoicesArr[$index]"
+            sn-model="c.vaccineChoicesArr[$index].value"
             sn-options="c.choiceOptions"
             sn-value-field="value"
             sn-text-field="display"
             sn-items="c.vaccineChoicesItems"
             sn-on-change="c.valueSelectedType(selectedValue,$index)"
+          >
+          </sn-choice-list>
+        </span>
+      </td>
+      <!-- ng-show="c.showVaxDef[$index]" -->
+      <!-- @note Vaccine Definition List -->
+      <td>
+        <span>
+          <sn-choice-list
+            field="c.vaccineDefArr[$index]"
+            sn-model="c.vaccineDefArr[$index]"
+            sn-options="c.choiceOptions"
+            sn-value-field="manufacturer"
+            sn-text-field="manufacturer"
+            sn-items="c.vaccineDefItems[$index]"
+            sn-on-change="c.valueSelectedDef(selectedValue,$index)"
           >
           </sn-choice-list>
         </span>

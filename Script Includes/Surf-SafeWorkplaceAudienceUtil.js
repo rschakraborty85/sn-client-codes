@@ -1,149 +1,5 @@
 var SafeWorkplaceAudienceUtil = Class.create();
 SafeWorkplaceAudienceUtil.prototype = {
-  // @note - added custom logic to search both in cmn and wsd location hierarchy
-  childLocationIsWithinParent: function (parentLocation, childLocation) {
-    this.STATIC_LOGGER +=
-      "parentLocation/audience=" +
-      parentLocation +
-      "\t" +
-      "childLocation=" +
-      childLocation +
-      "\n";
-    var childLocationGr = new GlideRecord("cmn_location");
-    childLocationGr.get(childLocation);
-    this.STATIC_LOGGER +=
-      "New log ChildLocationDisplay=" + childLocationGr.name + "\n";
-    var parentLocationGr = new GlideRecord("cmn_location");
-    parentLocationGr.get(parentLocation);
-    this.STATIC_LOGGER +=
-      "New log ParentLocationDisplay/Audience=" + parentLocationGr.name + "\n";
-    this.STATIC_LOGGER +=
-      "New log childLocationGr class=" + childLocationGr.sys_class_name + "\n";
-
-    if (childLocationGr.getUniqueValue() === parentLocation) {
-      return true;
-    }
-    // @note rc - custom code - start
-    else if (childLocationGr.sys_class_name.toString() == "sn_wsd_core_space") {
-      var spaceGR = new GlideRecord("sn_wsd_core_space");
-      spaceGR.get(childLocationGr.getUniqueValue());
-      this.STATIC_LOGGER +=
-        "New log childLocationGr CMN=" +
-        spaceGR.campus.u_cmn_location.toString() +
-        "\t" +
-        " parentLocation/audience=" +
-        parentLocation +
-        "\n";
-
-      if (spaceGR.campus.u_cmn_location.toString() == parentLocation)
-        return true;
-    }
-    // @note rc - custom code - end
-    var tempLoc = childLocationGr.parent;
-    while (tempLoc && tempLoc != parentLocation) {
-      tempLoc = tempLoc.parent;
-    }
-    return tempLoc == parentLocation;
-  },
-  // @note - debugging location checks
-  audienceContainsWorkplaceLocation: function (
-    audienceId,
-    workplaceLocationId
-  ) {
-    // var rc_log = "debugging audienceContainsWorkplaceLocation\n";
-    var audienceGr = new GlideRecord("sn_imt_core_safe_workplace_audience");
-    audienceGr.get(audienceId);
-
-    if (!audienceGr.locations) {
-      return true;
-    }
-
-    return (audienceGr.getValue("locations") || "")
-      .split(",")
-      .filter(function (location) {
-        // rc_log += "filter : location - " + location + "\n";
-        return location;
-      })
-      .some(
-        function (location) {
-          //   rc_log += "some : location - " + location + "\n";
-          return this.childLocationIsWithinParent(
-            location,
-            workplaceLocationId
-          );
-        }.bind(this)
-      );
-  },
-  // @note debugging this function
-  requirementAppliesToLocationAndUser: function (
-    requirementId,
-    workplaceLocationId,
-    userId
-  ) {
-    // var rc_log = "debugging requirementAppliesToLocationAndUser\n";
-    this.STATIC_LOGGER = "RC Debugging requirementAppliesToLocationAndUser \n";
-    var requirementGr = new GlideRecord(
-      "sn_imt_core_health_and_safety_requirement"
-    );
-    requirementGr.get(requirementId);
-    this.STATIC_LOGGER += "Requirement details=" + requirementGr.name + "\n";
-    if (!requirementGr.audience) {
-      return true;
-    }
-    var exclude = requirementGr.getValue("exclude") === "1";
-    var appliesToUser = (requirementGr.getValue("audience") || "")
-      .split(",")
-      .filter(function (audience) {
-        // rc_log += "filter : audience - " + audience + "\n";
-        return audience;
-      })
-      .some(
-        function (audience) {
-          //   rc_log += "some : audience - " + audience + "\n";
-          var one = this.audienceContainsWorkplaceLocation(
-            audience,
-            workplaceLocationId
-          );
-          var two = this.userIsInAudience(audience, userId, {
-            users: true,
-            locations: false,
-            departments: true,
-            groups: true,
-            companies: true,
-            roles: true,
-            condition: true,
-          });
-          this.STATIC_LOGGER += "One=" + one + "\t" + "Two=" + two + "\n";
-          var result = one && two;
-          return result;
-        }.bind(this)
-      );
-    this.STATIC_LOGGER += "appliesToUser=" + appliesToUser + "\n";
-    // gs.error(this.STATIC_LOGGER);
-    return exclude ? !appliesToUser : appliesToUser;
-  },
-  // @note RC - important
-  getRequirementsForLocation: function (workplaceLocationId, userId) {
-    var requirements = [];
-    var requirementGr = new GlideRecord(
-      "sn_imt_core_health_and_safety_requirement"
-    );
-    requirementGr.addQuery("active", true);
-    requirementGr.query();
-    while (requirementGr.next()) {
-      if (
-        this.requirementAppliesToLocationAndUser(
-          requirementGr.getUniqueValue(),
-          workplaceLocationId,
-          userId
-        )
-      ) {
-        requirements.push(requirementGr.getUniqueValue());
-      }
-    }
-    return requirements;
-  },
-
   initialize: function () {},
 
   getUsers: function (table, query, result_attribute) {
@@ -237,7 +93,7 @@ SafeWorkplaceAudienceUtil.prototype = {
     var query = "user.active=true^roleIN" + roleIds;
     return this.getUsers("sys_user_has_role", query, "user");
   },
- 
+
   getAudienceUsers: function (swaGr) {
     var users = [];
     var table = "";
@@ -374,6 +230,186 @@ SafeWorkplaceAudienceUtil.prototype = {
     coreUserGr.get(user);
     return coreUserGr;
   },
+  // @note RC
+  childLocationIsWithinParent: function (parentLocation, childLocation) {
+    var childLocationGr = new GlideRecord("cmn_location");
+    childLocationGr.get(childLocation);
+
+    var parentLocationGr = new GlideRecord("cmn_location");
+    parentLocationGr.get(parentLocation);
+
+    if (childLocationGr.getUniqueValue() === parentLocation) {
+      return true;
+    }
+    // @note rc - custom code - start
+    else if (childLocationGr.sys_class_name.toString() == "sn_wsd_core_space") {
+      var spaceGR = new GlideRecord("sn_wsd_core_space");
+      spaceGR.get(childLocationGr.getUniqueValue());
+
+      if (spaceGR.campus.u_cmn_location.toString() == parentLocation)
+        return true;
+    }
+    // @note rc - custom code - end
+    var tempLoc = childLocationGr.parent;
+    while (tempLoc && tempLoc != parentLocation) {
+      tempLoc = tempLoc.parent;
+    }
+    return tempLoc == parentLocation;
+  },
+  // @note RC
+  audienceContainsWorkplaceLocation: function (
+    audienceId,
+    workplaceLocationId
+  ) {
+    // var rc_log = "debugging audienceContainsWorkplaceLocation\n";
+    var audienceGr = new GlideRecord("sn_imt_core_safe_workplace_audience");
+    audienceGr.get(audienceId);
+
+    if (!audienceGr.locations) {
+      return true;
+    }
+
+    return (audienceGr.getValue("locations") || "")
+      .split(",")
+      .filter(function (location) {
+        // rc_log += "filter : location - " + location + "\n";
+        return location;
+      })
+      .some(
+        function (location) {
+          //   rc_log += "some : location - " + location + "\n";
+          return this.childLocationIsWithinParent(
+            location,
+            workplaceLocationId
+          );
+        }.bind(this)
+      );
+  },
+  //
+  /** @note RC - STRY2471219
+   * @override OOB function with new definition
+   * @param {*} audienceIDs
+   * @param {*} workplaceLocationId
+   * @param {*} userId
+   * @returns
+   */
+  requirementAppliesToLocationAndUser_TestingApp: function (
+    // requirementId,
+    audienceIDs,
+    workplaceLocationId,
+    userId
+  ) {
+    // var requirementGr = new GlideRecord(
+    //   "sn_imt_core_health_and_safety_requirement"
+    // );
+    // requirementGr.get(requirementId);
+
+    // if (!requirementGr.audience) {
+    //   return true;
+    // }
+    if (!audienceIDs) {
+      return true;
+    }
+    // var exclude = requirementGr.getValue("exclude") === "1";
+    // (requirementGr.getValue("audience") || "")
+    // @note - RC - overriding
+    var appliesToUser = (audienceIDs || "")
+      .split(",")
+      .filter(function (audience) {
+        return audience;
+      })
+      .some(
+        function (audience) {
+          var one = this.audienceContainsWorkplaceLocation(
+            audience,
+            workplaceLocationId
+          );
+          var two = this.userIsInAudience(audience, userId, {
+            users: true,
+            locations: false,
+            departments: true,
+            groups: true,
+            companies: true,
+            roles: true,
+            condition: true,
+          });
+
+          var result = one && two;
+          return result;
+        }.bind(this)
+      );
+    return appliesToUser;
+    // return exclude ? !appliesToUser : appliesToUser;
+  },
+  // @note RC
+  requirementAppliesToLocationAndUser: function (
+    requirementId,
+    workplaceLocationId,
+    userId
+  ) {
+    // var rc_log = "debugging requirementAppliesToLocationAndUser\n";
+
+    var requirementGr = new GlideRecord(
+      "sn_imt_core_health_and_safety_requirement"
+    );
+    requirementGr.get(requirementId);
+
+    if (!requirementGr.audience) {
+      return true;
+    }
+    var exclude = requirementGr.getValue("exclude") === "1";
+    var appliesToUser = (requirementGr.getValue("audience") || "")
+      .split(",")
+      .filter(function (audience) {
+        // rc_log += "filter : audience - " + audience + "\n";
+        return audience;
+      })
+      .some(
+        function (audience) {
+          //   rc_log += "some : audience - " + audience + "\n";
+          var one = this.audienceContainsWorkplaceLocation(
+            audience,
+            workplaceLocationId
+          );
+          var two = this.userIsInAudience(audience, userId, {
+            users: true,
+            locations: false,
+            departments: true,
+            groups: true,
+            companies: true,
+            roles: true,
+            condition: true,
+          });
+
+          var result = one && two;
+          return result;
+        }.bind(this)
+      );
+
+    return exclude ? !appliesToUser : appliesToUser;
+  },
+  // @note RC - important
+  getRequirementsForLocation: function (workplaceLocationId, userId) {
+    var requirements = [];
+    var requirementGr = new GlideRecord(
+      "sn_imt_core_health_and_safety_requirement"
+    );
+    requirementGr.addQuery("active", true);
+    requirementGr.query();
+    while (requirementGr.next()) {
+      if (
+        this.requirementAppliesToLocationAndUser(
+          requirementGr.getUniqueValue(),
+          workplaceLocationId,
+          userId
+        )
+      ) {
+        requirements.push(requirementGr.getUniqueValue());
+      }
+    }
+    gs.info(requirements);
+    return requirements;
+  },
 
   userIsInAudience: function (audience, userId, include) {
     var swaGr = new GlideRecord("sn_imt_core_safe_workplace_audience");
@@ -506,7 +542,9 @@ SafeWorkplaceAudienceUtil.prototype = {
     healthAndSafetyUserUtil.createRequirementsForCoreUser(
       requirementGr,
       coreUserGr,
-      { resetToDefaultStatus: true }
+      {
+        resetToDefaultStatus: true,
+      }
     );
   },
 

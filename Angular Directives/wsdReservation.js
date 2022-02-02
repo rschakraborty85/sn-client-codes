@@ -1,5 +1,5 @@
-//wsdReservation - directive
-// RC - customized - duplicate check
+// wsdReservation - directive
+// RC - customized - duplicate check - mreged with oob
 // custom type definitions can be found at the bottom of the file.
 
 function wsdReservation(
@@ -18,10 +18,14 @@ function wsdReservation(
     restrict: "E",
     scope: {
       isNative: "<",
+      translations: "<",
+
       mode: "<",
       start: "<",
       end: "<",
       shift: "<",
+      shiftFilteringAllowed: "<",
+      shiftOnBehalfOfUsers: "<",
       reservables: "<",
       reservableIds: "<",
       reservableModule: "<",
@@ -33,6 +37,9 @@ function wsdReservation(
       recurringPattern: "<",
       requireSubject: "<",
       displayNumberOfAttendees: "<",
+      displayOnBehalfOf: "<",
+      displaySensitivity: "<",
+      pageIds: "<",
       summaryPageId: "<",
       searchPageId: "<",
       reservationAcl: "<",
@@ -52,11 +59,14 @@ function wsdReservation(
       };
 
       scope.redirectToSearchPage = redirectToSearchPage;
+      scope.redirectToMyReservationsPage = redirectToMyReservationsPage;
       scope.handleCancelPress = handleCancelPress;
       scope.createReservation = createReservation;
       scope.updateReservation = updateReservation;
+      scope.toggleSensitivity = toggleSensitivity;
       scope.getDateTimeInFormat = wsdUtils.getDateTimeInFormat;
       scope.getDateInFormat = wsdUtils.getDateInFormat;
+      scope.getTimeFromDate = wsdUtils.getTimeFromDate;
       scope.getHumanizedTimeDuration = wsdUtils.getHumanizedTimeDuration;
       scope.validateAttendeeCount = validateAttendeeCount;
       scope.canEditOnBehalf = canEditOnBehalf;
@@ -66,8 +76,7 @@ function wsdReservation(
       scope.closeExtraServicesModal = closeExtraServicesModal;
       scope.addExtraServiceToModal = addExtraServiceToModal;
       scope.removeExtraServiceFromModal = removeExtraServiceFromModal;
-      scope.removeCategoryExtraServicesFromReservable =
-        removeCategoryExtraServicesFromReservable;
+      scope.removeCategoryExtraServicesFromReservable = removeCategoryExtraServicesFromReservable;
       scope.addExtraServicesToReservable = addExtraServicesToReservable;
       scope.handleExtraServiceSelection = handleExtraServiceSelection;
       scope.calcExtraServicePrice = calcExtraServicePrice;
@@ -81,64 +90,84 @@ function wsdReservation(
 
       scope.isMulti = false;
       scope.isLoading = false;
+      scope.isRedirecting = false;
       scope.isProcessingExtraServices = false;
       scope.sensitivity = "normal";
       scope.onBehalfOf = {};
       scope.numberOfAttendees = {};
+      scope.selectedSubCategoryEl = null;
+      scope.disableButton = false;
+      // disables reservation api calls, while either reservation api call is being handled and while the page is waiting for redirect
+      // so the user cannot resubmit in the time when the request is finished but the redirect is still being processed
+      // only if the api errors, the submit button will be unlocked
+      scope.disableReservationCreation = false;
 
       function init() {
         scope.sensitivity = "normal";
+        scope.onBehalfOf = {
+          value: NOW.user_id,
+          displayValue: NOW.user_display_name,
+        };
         _fetchDataFromReservation();
         _createInitialReservablesWatcher();
         _setSelectedSensitivityValue(scope.sensitivity);
+        if (scope.shiftFilteringAllowed)
+          _prepareShiftUserPicker(scope.shiftOnBehalfOfUsers);
       }
       init();
 
       /**
-       * RC - moved below function up since its customized
-       * changed the error handling for duplicate reservation
-       * Create a single room reservation
+       * construct select2 data so that it can be displayed for shift users
+       * @param shiftUsers
+       * @private
        */
-      function _createSingleReservation() {
-        var reservation = _constructCreateReservationRequestObj();
-        scope.isLoading = true;
+      function _prepareShiftUserPicker(shiftUsers) {
+        scope.shiftUserFormatted = _constructShiftUserSelect2OptionsData(
+          shiftUsers
+        );
+        scope.shiftUserSelect2Options = {
+          data: scope.shiftUserFormatted,
+          placeholder: {
+            id: scope.onBehalfOf.value,
+            text: scope.onBehalfOf.displayValue,
+          },
+          formatResult: buildShiftUserItemLayout,
+          formatSelection: buildShiftUserItemLayout,
+        };
+      }
+      /**
+       * format shift user data so that it can be displayed in select2 dropdown.
+       * @param shiftUsers
+       * @returns []
+       * @private
+       */
+      function _constructShiftUserSelect2OptionsData(shiftUsers) {
+        var convertedData = [];
 
-        wsdReservationService
-          .createReservation(reservation)
-          .then(function (response) {
-            scope.isLoading = false;
+        if (!shiftUsers || !wsdUtils.arrayHasElement(shiftUsers))
+          return convertedData;
 
-            if (!response.sys_id) {
-              var errorMsg =
-                "${A reservation could not be created at the moment, please try again}";
-              _showSavingErrorMessage(errorMsg, null);
-              return;
-            }
+        shiftUsers.forEach(function (element) {
+          var obj = {
+            id: element.value,
+            text: element.displayValue,
+          };
+          convertedData.push(obj);
+        });
 
-            reservation.sys_id = response.sys_id;
-            wsdStateService.setState("currentReservation", reservation);
-
-            if (_reservableHasExtraServices(reservation.location))
-              _createExtraServiceRequests(
-                [{ id: reservation.sys_id, locationId: reservation.location }],
-                reservation.sys_id
-              );
-            else redirectToDetailsPage(reservation.sys_id, true);
-          })
-          ["catch"](function (errorResponse) {
-            // console.log(
-            //   "RC wsdReservation directive ; error " +
-            //     JSON.stringify(errorResponse)
-            // );
-            scope.isLoading = false;
-            var errorMsg = _.get(
-              errorResponse,
-              "data.error.detail", //RC "data.error.message",
-              "${A reservation could not be created at the moment, please try again}"
-            );
-            //console.log("RC wsdReservation directive ; errorMsg " + errorMsg);
-            _showSavingErrorMessage(errorMsg, null);
-          });
+        return convertedData;
+      }
+      /**
+       * Builds the html for the sort by options
+       * @param {SortByOption} item Sort By option to render html for
+       * @returns {string}
+       */
+      function buildShiftUserItemLayout(item) {
+        return wsdUtils.formatString(
+          '<span title="{0}" aria-label="{0}">{1}</span>',
+          item.text,
+          item.text
+        );
       }
 
       /**
@@ -185,40 +214,40 @@ function wsdReservation(
        * When the reservables contain data, check for multi mode and prepare number of attendees input
        */
       function _createInitialReservablesWatcher() {
-        var reservablesListener = scope.$watch(
-          "reservables",
-          function (newVal) {
-            if (!newVal) return;
+        var reservablesListener = scope.$watch("reservables", function (
+          newVal
+        ) {
+          if (!newVal) return;
 
-            scope.isMulti = _isMulti(scope.reservables);
-            scope.constructReservableName = constructReservableName;
+          scope.isMulti = _isMulti(scope.reservables);
+          scope.constructReservableName = constructReservableName;
 
-            scope.reservables.forEach(function (reservable) {
-              if (scope.mode !== "edit")
+          scope.reservables.forEach(function (reservable) {
+            if (scope.mode !== "edit")
+              scope.addedExtraServices[reservable.sys_id] = {};
+            else {
+              // unable to find any reserved extra services
+              if (_.isEmpty(scope.reservedExtraServices)) {
                 scope.addedExtraServices[reservable.sys_id] = {};
-              else {
-                // unable to find any reserved extra services
-                if (_.isEmpty(scope.reservedExtraServices)) {
-                  scope.addedExtraServices[reservable.sys_id] = {};
-                  return;
-                }
-                _addCategoryInformationToAddedServices(reservable);
+                return;
               }
-            });
-            _processExtraServicesForUnknownReservables();
-
-            if (!_.isEmpty(scope.numberOfAttendees)) {
-              reservablesListener();
-              return;
+              _addCategoryInformationToAddedServices(reservable);
             }
+          });
+          _processExtraServicesForUnknownReservables();
 
-            scope.reservables.forEach(function (reservable) {
-              scope.numberOfAttendees[reservable.sys_id] =
-                DEFAULT_NUMBER_OF_ATTENDEES;
-            });
+          if (!_.isEmpty(scope.numberOfAttendees)) {
             reservablesListener();
+            return;
           }
-        );
+
+          scope.reservables.forEach(function (reservable) {
+            scope.numberOfAttendees[
+              reservable.sys_id
+            ] = DEFAULT_NUMBER_OF_ATTENDEES;
+          });
+          reservablesListener();
+        });
       }
 
       /**
@@ -287,30 +316,112 @@ function wsdReservation(
        * @return {void}
        */
       function createReservation() {
+        // check if creating is locked, then return or lock creating
+        if (scope.disableReservationCreation) return;
+
+        scope.disableReservationCreation = true;
+        scope.disableButton = true;
         var invalidFields = _fetchInvalidFields(scope.requireSubject);
         if (wsdUtils.arrayHasElement(invalidFields)) {
           _showInvalidFieldsError(invalidFields);
+          scope.disableReservationCreation = false;
+          scope.disableButton = false;
           return;
         }
 
-        if (scope.mode === "recurring_create") _createRecurringReservation();
-        else if (scope.isMulti) _createMultiReservation();
-        else _createSingleReservation();
+        if (scope.mode === "recurring_create")
+          _createRecurringReservation()["catch"](
+            _catchFailedReservationCreate(
+              "${A recurring reservation could not be created at the moment, please try again}"
+            )
+          );
+        else if (scope.isMulti)
+          _createMultiReservation()["catch"](
+            _catchFailedReservationCreate(
+              "${A Multi-reservation could not be created at the moment, please try again}"
+            )
+          );
+        else
+          _createSingleReservation()["catch"](
+            _catchFailedReservationCreate(
+              "${A reservation could not be created at the moment, please try again}"
+            )
+          );
       }
+      /**
+       *
+       * @param {string} defaultErrorMsg
+       * @return {function(*=): void} promise error handler, for reservation create api
+       * @private
+       */
+      function _catchFailedReservationCreate(defaultErrorMsg) {
+        return function (error) {
+          scope.disableReservationCreation = false;
+          scope.disableButton = false;
+          scope.isLoading = false;
 
+          var errorMsg = _.get(error, "data.error.message");
+          errorMsg = !errorMsg
+            ? defaultErrorMsg
+            : wsdUtils.formatString("{0}. {1}", defaultErrorMsg, errorMsg);
+
+          _showSavingErrorMessage(errorMsg, null);
+        };
+      }
+      /**
+       * RC - moved below function up since its customized
+       * changed the error handling for duplicate reservation
+       * Create a single room reservation
+       */
+      function _createSingleReservation() {
+        scope.isLoading = true;
+        var reservation = _constructCreateReservationRequestObj();
+
+        return wsdReservationService
+          .createReservation(reservation)
+          .then(function (response) {
+            scope.isLoading = false;
+
+            if (!response.sys_id) {
+              var errorMsg =
+                "${A reservation could not be created at the moment, please try again}";
+              _showSavingErrorMessage(errorMsg, null);
+              return;
+            }
+
+            reservation.sys_id = response.sys_id;
+            wsdStateService.setState("currentReservation", reservation);
+
+            if (_reservableHasExtraServices(reservation.location))
+              _createExtraServiceRequests(
+                [{ id: reservation.sys_id, locationId: reservation.location }],
+                reservation.sys_id
+              );
+            else redirectToDetailsPage(reservation.sys_id, true);
+          })
+          ["catch"](function (errorResponse) {
+            scope.isLoading = false;
+            var errorMsg = _.get(
+              errorResponse,
+              "data.error.detail", //RC "data.error.message",
+              "${A reservation could not be created at the moment, please try again}"
+            );
+            //console.log("RC wsdReservation directive ; errorMsg " + errorMsg);
+            _showSavingErrorMessage(errorMsg, null);
+          });
+      }
       /**
        * Create a multi room reservation
        */
       function _createMultiReservation() {
-        var reservation = _constructCreateReservationRequestObj();
         scope.isLoading = true;
+        var reservation = _constructCreateReservationRequestObj();
 
-        wsdMultiReservationService
+        return wsdMultiReservationService
           .createMultiReservation(reservation)
           .then(function (response) {
-            scope.isLoading = false;
-
             if (!response.success) {
+              scope.isLoading = false;
               var errorMsg =
                 "${A reservation could not be created at the moment, please try again}";
               _showSavingErrorMessage(errorMsg, null);
@@ -334,11 +445,8 @@ function wsdReservation(
             }
 
             if (hasServices) {
-              var successfulReservations =
-                response.successfulReservations.reduce(function (
-                  total,
-                  multiChildReservation
-                ) {
+              var successfulReservations = response.successfulReservations.reduce(
+                function (total, multiChildReservation) {
                   if (multiChildReservation.inserted)
                     total.push({
                       id: multiChildReservation.sys_id,
@@ -346,7 +454,8 @@ function wsdReservation(
                     });
                   return total;
                 },
-                []);
+                []
+              );
 
               _createExtraServiceRequests(
                 successfulReservations,
@@ -370,6 +479,7 @@ function wsdReservation(
        * @private
        */
       function _createRecurringReservation() {
+        scope.isLoading = true;
         var reservation = _constructCreateReservationRequestObj(true);
         var pattern = scope.recurringPattern;
         var recurringReservation = {
@@ -377,15 +487,14 @@ function wsdReservation(
           recurringPattern: pattern,
         };
 
-        wsdReservationService
+        return wsdReservationService
           .createRecurringReservation(recurringReservation)
           .then(function (response) {
-            scope.isLoading = false;
-
             var noCreatedMeetings =
               response.successfulReservations.length === 0 &&
               response.unSuccessfulReservations.length === 0;
             if (!response.parent || noCreatedMeetings) {
+              scope.isLoading = false;
               var errorMsg =
                 "${A recurring reservation could not be created at the moment, please try again}";
               _showSavingErrorMessage(errorMsg, null);
@@ -394,6 +503,7 @@ function wsdReservation(
 
             var firstOccurence = _getFirstOccurence(response);
             if (!firstOccurence) {
+              scope.isLoading = false;
               var errorMsg =
                 "${A recurring reservation could not be created at the moment, please try again}";
               _showSavingErrorMessage(errorMsg, null);
@@ -401,11 +511,8 @@ function wsdReservation(
             }
 
             if (_reservableHasExtraServices(reservation.location)) {
-              var successfulReservations =
-                response.successfulReservations.reduce(function (
-                  total,
-                  occurrence
-                ) {
+              var successfulReservations = response.successfulReservations.reduce(
+                function (total, occurrence) {
                   if (occurrence.inserted) {
                     total.push({
                       id: occurrence.sys_id,
@@ -416,7 +523,8 @@ function wsdReservation(
 
                   return total;
                 },
-                []);
+                []
+              );
 
               _createExtraServiceRequests(
                 successfulReservations,
@@ -448,8 +556,9 @@ function wsdReservation(
         redirectReservationSysId,
         isUpdate
       ) {
-        var extraServiceRequestList =
-          _constructExtraServiceRequestList(reservations);
+        var extraServiceRequestList = _constructExtraServiceRequestList(
+          reservations
+        );
         var promiseList = [];
 
         // send out an API call for every extra service request
@@ -469,7 +578,7 @@ function wsdReservation(
         }
 
         // when all promises are resolved, either redirect or show an error message
-        $q.all(promiseList).then(function (result) {
+        return $q.all(promiseList).then(function (result) {
           var isValid = result.every(function (el) {
             return el === true;
           });
@@ -478,7 +587,7 @@ function wsdReservation(
             redirectToDetailsPage(redirectReservationSysId, !isUpdate);
             return;
           }
-
+          scope.isLoading = false;
           var errorMsg =
             "${Unable to process one or more extra service requests}";
           _showNotification(
@@ -585,6 +694,7 @@ function wsdReservation(
        * @return {void}
        */
       function redirectToSearchPage(locOrTimeChange) {
+        scope.isRedirecting = true;
         var queryParams = { id: scope.searchPageId };
 
         if (locOrTimeChange) {
@@ -615,8 +725,15 @@ function wsdReservation(
         $location.replace();
 
         if (isNew) queryParams.new_reservation = true;
-
-        wsdUtils.openPage(scope.summaryPageId, queryParams);
+        wsdUtils.openPage(scope.pageIds.reservationSummary, queryParams);
+        // RC - disabled
+        // wsdUtils.openPage(scope.summaryPageId, queryParams);
+      }
+      /**
+       * Redirect user to My Reservations page
+       */
+      function redirectToMyReservationsPage() {
+        wsdUtils.openPage(scope.pageIds.myReservations);
       }
 
       /**
@@ -638,11 +755,14 @@ function wsdReservation(
           .then(
             function () {
               // Continue
-              wsdUtils.openPage(scope.searchPageId, queryParams);
+              wsdUtils.openPage(scope.pageIds.search, queryParams);
+              //   RC - disabled
+              //   wsdUtils.openPage(scope.searchPageId, queryParams);
             },
             function () {
               // Cancel
-              return;
+              scope.isRedirecting = false;
+              //   return;
             }
           );
       }
@@ -661,7 +781,7 @@ function wsdReservation(
       function _showInvalidFieldsError(invalidFields) {
         var errorMsg = wsdUtils.formatString(
           "{0}: {1}",
-          "${One or more fields are missing}",
+          "${Complete all required fields}",
           invalidFields.join(", ")
         );
         _showNotification(errorMsg, "alert-danger", "fa-exclamation-triangle");
@@ -678,9 +798,8 @@ function wsdReservation(
           _showInvalidFieldsError(invalidFields);
           return;
         }
-
-        var reservation = _constructUpdateRequestObj();
         scope.isLoading = true;
+        var reservation = _constructUpdateRequestObj();
 
         var updatePromise =
           !scope.isMulti && scope.reservation.location
@@ -695,13 +814,12 @@ function wsdReservation(
 
         updatePromise
           .then(function (response) {
-            scope.isLoading = false;
             var reservationSysId = !scope.isMulti
               ? response.sys_id
               : response.parent;
-
-            var extraServiceRequestProcessingResult =
-              _initialExtraServiceRequestProcessing(response);
+            var extraServiceRequestProcessingResult = _initialExtraServiceRequestProcessing(
+              response
+            );
             if (
               wsdUtils.arrayHasElement(
                 extraServiceRequestProcessingResult.reservations
@@ -728,8 +846,29 @@ function wsdReservation(
             );
             _showSavingErrorMessage(errorMsg, reservation);
           });
+        //     var extraServiceRequestProcessingResult = _initialExtraServiceRequestProcessing(
+        //       response
+        //     );
+        //     if (
+        //       wsdUtils.arrayHasElement(
+        //         extraServiceRequestProcessingResult.reservations
+        //       )
+        //     )
+        //       _createExtraServiceRequests(
+        //         extraServiceRequestProcessingResult.reservations,
+        //         extraServiceRequestProcessingResult.redirectReservationSysId,
+        //         true
+        //       );
+        //     else redirectToDetailsPage(reservationSysId);
+        //   })
       }
-
+      /**
+       * change sensitivity based on check box
+       * @param {*} event
+       */
+      function toggleSensitivity(event) {
+        scope.sensitivity = event.target.checked ? "private" : "normal";
+      }
       /**
        * Initial processing before updating an extra service request
        * @param {*} response
@@ -776,11 +915,19 @@ function wsdReservation(
             return item !== response.location_id;
           });
 
-          if (unknownReservables.length > 0)
-            reservations.push({
+          if (unknownReservables.length > 0) {
+            // any unknown reserverables come from changing the selected location of the reservation
+            // So in order to prevent cancelling of the blockers for the new services we insert for the new location
+            // we should first cancel the services for the previous reservable (Array.unshift)
+            reservations.unshift({
               id: response.sys_id,
               locationId: unknownReservables[0],
             });
+          }
+          // reservations.push({
+          //   id: response.sys_id,
+          //   locationId: unknownReservables[0],
+          // });
         }
 
         return {
@@ -1022,8 +1169,9 @@ function wsdReservation(
           typeof scope.numberOfAttendees[reservableSysId] !== "number" ||
           scope.numberOfAttendees[reservableSysId] < DEFAULT_NUMBER_OF_ATTENDEES
         )
-          scope.numberOfAttendees[reservableSysId] =
-            DEFAULT_NUMBER_OF_ATTENDEES;
+          scope.numberOfAttendees[
+            reservableSysId
+          ] = DEFAULT_NUMBER_OF_ATTENDEES;
       }
 
       /**
@@ -1068,8 +1216,12 @@ function wsdReservation(
       function openExtraServicesModal(
         reservableSysId,
         selectedExtraService,
-        isEdit
+        isEdit,
+        event
       ) {
+        // keep track of the selected sub category element. This value will later be used to set the focus back on the dropdown after the modal closes
+        scope.selectedSubCategoryEl =
+          event && event.target ? event.target : null;
         if (!reservableSysId || _.isEmpty(selectedExtraService)) return;
 
         // use the extra services that were previously saved on the reservable to further construct the modal
@@ -1144,6 +1296,12 @@ function wsdReservation(
         });
 
         modalInstance.result["finally"](function () {
+          if (scope.selectedSubCategoryEl) {
+            var extraServicesDropdownEl = _getExtraServicesDropdownEl(
+              scope.selectedSubCategoryEl
+            );
+            extraServicesDropdownEl ? extraServicesDropdownEl.focus() : null;
+          }
           // when the modal is closed (through any action), clear out the modal
           scope.modalObj = {};
         });
@@ -1206,8 +1364,9 @@ function wsdReservation(
           addedServices: [],
           totalPrice: 0,
           comment: null,
-          select2Options:
-            _constructExtraServicesSelect2Options(selectedExtraService),
+          select2Options: _constructExtraServicesSelect2Options(
+            selectedExtraService
+          ),
         };
 
         return extraServicesModal;
@@ -1264,9 +1423,16 @@ function wsdReservation(
           subCategory: extraServiceSubCategory.sub_category,
           label: extraServiceSubCategory.label,
           quantity: modalObj.numberOfAttendees,
-          deliveryTime: modalObj.startSetupTime,
+          //deliveryTime: modalObj.startSetupTime,
+          deliveryTime: wsdUtils.getTimeFromDate(scope.start),
           price: 0,
           comments: "",
+          setupDuration: null,
+          label: extraServiceSubCategory.label,
+          deliveryTimeLabel: "",
+          quantityLabel: "",
+          totalPriceLabel: "",
+          commentLabel: "",
         };
 
         // when loaded in MESP, it requires select2 to have a valid initial value
@@ -1461,7 +1627,32 @@ function wsdReservation(
             return item.sys_id === serviceSysId;
           })[0];
 
-          if (service) scope.modalObj.addedServices[index].name = service.name;
+          if (service) {
+            var addedService = scope.modalObj.addedServices[index];
+            addedService.name = service.name;
+            addedService.quantity = service.quantity_enabled
+              ? addedService.quantity
+              : 1;
+            addedService.quantity_enabled = service.quantity_enabled;
+            addedService.setupDuration = service.preparation_duration;
+            addedService.deliveryTimeLabel = wsdUtils.formatString(
+              scope.translations.deliveryTimeLabel,
+              service.name
+            );
+            addedService.quantityLabel = wsdUtils.formatString(
+              scope.translations.quantityLabel,
+              service.name
+            );
+            addedService.totalPriceLabel = wsdUtils.formatString(
+              scope.translations.totalPriceLabel,
+              service.name
+            );
+            addedService.commentLabel = wsdUtils.formatString(
+              scope.translations.commentLabel,
+              service.name
+            );
+          }
+          //   scope.modalObj.addedServices[index].name = service.name;
         }
 
         calcExtraServicePrice(
@@ -1544,6 +1735,44 @@ function wsdReservation(
         0);
         scope.modalObj.totalPrice = totalPrice.toFixed(2);
       }
+      /**
+       * Calculate the service times on a single extra service category (setup time)
+       * @private
+       */
+      function _calcServiceTimes() {
+        var activeAddedServices = scope.modalObj.addedServices.filter(
+          wsdUtils.filterAddedServices
+        );
+        var startTime = moment(scope.start);
+
+        if (!wsdUtils.arrayHasElement(activeAddedServices)) {
+          scope.modalObj.startSetupTime = wsdUtils.getTimeFromDate(startTime);
+          return;
+        }
+
+        var setupDurations = activeAddedServices.reduce(function (
+          accumulator,
+          current
+        ) {
+          if (current.setupDuration) accumulator.push(current.setupDuration);
+
+          return accumulator;
+        },
+        []);
+
+        if (!wsdUtils.arrayHasElement(setupDurations)) {
+          scope.modalObj.startSetupTime = wsdUtils.getTimeFromDate(startTime);
+          return;
+        }
+
+        var highestSetupDuration = setupDurations.reduce(function (a, b) {
+          return Math.max(a, b);
+        });
+
+        scope.modalObj.startSetupTime = wsdUtils.getTimeFromDate(
+          startTime.milliseconds(-highestSetupDuration)
+        );
+      }
 
       /**
        * Get a list of available flexible services
@@ -1553,12 +1782,11 @@ function wsdReservation(
        */
       function _getAvailableExtraServices(subCategoryName) {
         var extraServiceGroupedByCategory = scope.modalObj.extraService;
-        var extraServiceGroupedBySubCategory =
-          extraServiceGroupedByCategory.flexible_service.filter(function (
-            item
-          ) {
+        var extraServiceGroupedBySubCategory = extraServiceGroupedByCategory.flexible_service.filter(
+          function (item) {
             return item.sub_category === subCategoryName;
-          })[0];
+          }
+        )[0];
 
         if (
           extraServiceGroupedBySubCategory &&
@@ -1589,10 +1817,11 @@ function wsdReservation(
         }
 
         categoryNames.forEach(function (categoryName) {
-          var extraServiceGroupedByCategory =
-            reservable.flexible_services.filter(function (groupedService) {
+          var extraServiceGroupedByCategory = reservable.flexible_services.filter(
+            function (groupedService) {
               return groupedService.category === categoryName;
-            })[0];
+            }
+          )[0];
 
           // contains all relevant extra services data for a single category (e.g., catering or support)
           if (extraServiceGroupedByCategory)
@@ -1667,6 +1896,25 @@ function wsdReservation(
           scope.reservation.edit_restriction.value ===
             RSV_EDIT_RESTRICTION.noRestriction
         );
+      }
+      /**
+       * Get the extra services dropdown element based on the provided sub category element
+       * Traverse up and attempt to find the button element
+       * @param {Object} subCategoryEl
+       * @return {Object|null}
+       * @private
+       */
+      function _getExtraServicesDropdownEl(subCategoryEl) {
+        if (!subCategoryEl) return null;
+
+        var dropdownListEl = subCategoryEl.parentElement;
+        if (!dropdownListEl) return null;
+
+        var dropdownMenuEl = dropdownListEl.parentElement;
+        if (!dropdownMenuEl) return null;
+
+        var dropdownButtonEl = dropdownMenuEl.previousElementSibling;
+        return dropdownButtonEl || null;
       }
     },
 

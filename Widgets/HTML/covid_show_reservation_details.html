@@ -8,7 +8,7 @@
           ng-click="closemodal()"
           style="width: 20px"
         >
-          &times;
+          ${&times;}
         </button>
       </h4>
     </div>
@@ -142,14 +142,43 @@
             {{req.requirement_action_name}}
           </a>
         </span>
-        <!-- @note RC -->
+
         <span
-          ng-if="req.requirement_sys_id == data.vaccineRequirementId || req.requirement_sys_id == data.vaccineRequirementId2"
+          ng-if="(req.requirement_sys_id == data.vaccineRequirementId ) && !req.requirement_valid_until"
           class="vaccination_action col-xs-9 col-sm-9 col-md-9 col-lg-9"
           style="padding-left: 0px"
         >
+          <!-- @debug RC -->
           <span
             ng-repeat="vaccine_req in data.vaccine_action_list track by $index"
+            class="col-xs-6 col-sm-6 col-md-6 col-lg-6"
+            ng-class-even="'vaccination_action_link'"
+            ng-class-odd="'vaccination_action_odd'"
+          >
+            <a
+              class="safety-requirement-action-name"
+              style="
+                display: inline-block;
+                line-height: 22px;
+                padding-left: 0px;
+              "
+              ng-if="!req.requirement_action_name && !c.data.mobile  && !req.requirement_valid_until"
+              aria-label="{{vaccine_req.name}}"
+              href="{{(vaccine_req.url ? data.portalSuffix+vaccine_req.url : '')}}"
+              target="_blank"
+              >{{vaccine_req.name}}
+            </a>
+          </span>
+        </span>
+        <!-- @note RC - added another block  -->
+        <span
+          ng-if="(req.requirement_sys_id == data.vaccineRequirementId2) && !req.requirement_valid_until"
+          class="vaccination_action col-xs-9 col-sm-9 col-md-9 col-lg-9"
+          style="padding-left: 0px"
+        >
+          <!-- @debug RC -->
+          <span
+            ng-repeat="vaccine_req in data.vaccine_action_list_new track by $index"
             class="col-xs-6 col-sm-6 col-md-6 col-lg-6"
             ng-class-even="'vaccination_action_link'"
             ng-class-odd="'vaccination_action_odd'"
@@ -194,5 +223,4 @@
     >
   </div>
 </div>
-
 <!-- your widget template -->

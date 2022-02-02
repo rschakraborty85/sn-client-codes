@@ -22,57 +22,40 @@
    * Gets initial batch of reservations and stores in in data object.
    */
   function initialize() {
-    try {
-      try {
-        // RC - change start
-        var userUtils = new sn_wsd_rsv.WSDUserUtils();
-        data.isRtoSelfReserveUser =
-          userUtils.isLoggedInUserRtoSelfReserveUser();
-        // RC - change end
-      } catch (error) {
-        // console.log("RC ERROR initialize 1 " + error);
-      }
+    // RC - change start
+    var userUtils = new sn_wsd_rsv.WSDUserUtils();
+    data.isRtoSelfReserveUser = userUtils.isLoggedInUserRtoSelfReserveUser();
+    // RC - change end
+    data.mode = $sp.getParameter("mode");
+    data.reservable_module = $sp.getParameter("reservable_module");
+    data.reservation_id = $sp.getParameter("reservation_id");
+    data.reservation = _loadReservation(data.mode, data.reservation_id);
 
-      data.mode = $sp.getParameter("mode");
-      data.reservable_module = $sp.getParameter("reservable_module");
-      data.reservation_id = $sp.getParameter("reservation_id");
+    data.initSearchConfig = new WSDSearchService().getInitSearchConfig(
+      data.reservable_module
+    );
+    var check = JSON.stringify(data.initSearchConfig) ? "FALSE" : "TRUE";
 
-      data.reservation = _loadReservation(data.mode, data.reservation_id);
-      try {
-        data.initSearchConfig = new WSDSearchService().getInitSearchConfig(
-          data.reservable_module
-        );
-         console.log(
-           "RC initSearchConfig json " + JSON.stringify(data.initSearchConfig)
-         );
-      } catch (error) {
-        // console.log("RC ERROR initialize 2 " + error);
-      }
-      var check = JSON.stringify(data.initSearchConfig) ? "FALSE" : "TRUE";
+    // RC - changed
 
-      // RC - changed
+    if (check == "TRUE") {
+      data.initModuleMultiSelect =
+        data.initSearchConfig &&
+        data.initSearchConfig.reservable_module.allow_multi_select == "true"
+          ? true
+          : false;
 
-      if (check == "TRUE") {
-        data.initModuleMultiSelect =
-          data.initSearchConfig &&
-          data.initSearchConfig.reservable_module.allow_multi_select == "true"
-            ? true
-            : false;
-
-        data.user_building_tz = data.initSearchConfig.time_zone_info;
-        data.building_area_select_seat = data.initSearchConfig.building
-          .area_select_seat
-          ? "true"
-          : "false";
-        data.module_has_select_seat =
-          data.initSearchConfig.reservable_module.filter_has_select_seat;
-      }
-      // RC - end
-      options.page_size = _getDefaultPageSize();
-      _fetchConfiguredStartEndDay();
-    } catch (error) {
-      console.log("RC ERROR initialize " + error);
+      data.user_building_tz = data.initSearchConfig.time_zone_info;
+      data.building_area_select_seat = data.initSearchConfig.building
+        .area_select_seat
+        ? "true"
+        : "false";
+      data.module_has_select_seat =
+        data.initSearchConfig.reservable_module.filter_has_select_seat;
     }
+    // RC - end
+    options.page_size = _getDefaultPageSize();
+    _fetchConfiguredStartEndDay();
   }
 
   /**

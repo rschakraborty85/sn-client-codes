@@ -1,5 +1,5 @@
 /** wsdSearchFilter Directive - customized
- *
+ * 
  * Search filter directive. responsible for search execution and filtering reservable
  * Custom type definitions can be found at the bottom of the file.
  * @param {*} $timeout
@@ -7,7 +7,7 @@
  * @param {wsdStateService} wsdStateService
  * @param {wsdReservableSearch} wsdReservableSearch
  */
-function wsdSearchFilter(
+ function wsdSearchFilter(
   $timeout,
   wsdUtils,
   wsdStateService,
