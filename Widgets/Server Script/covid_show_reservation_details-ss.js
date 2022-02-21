@@ -1,11 +1,12 @@
 (function () {
   /* populate the 'data' object */
   /* e.g., data.table = $sp.getValue('table'); */
-
+  $sp.isMobile;
   if (input) {
     data.sys_id = input.sys_id;
   }
-  // @note property block
+  // @note property block - this is only for deciding links
+  // not imp for clearid
   {
     data.requirement_instruction = gs.getProperty(
       "sn_imt_quarantine.covid_requirement_clearance_message"
@@ -18,7 +19,7 @@
       "covid_rtw_vaccination_requirement_sys_id_2"
     );
   }
-
+  // req for clearid - data fetch for reservation
   var gr_reservation = new GlideRecord("sn_wsd_core_reservation");
   gr_reservation.get(data.sys_id);
   gr_reservation.query();
@@ -54,6 +55,7 @@
   }
 
   // @note PPE Message
+  // not req for clearid
   {
     var ppe_req = new sn_imt_core.CustomRTORequirementsUtil();
 
@@ -66,6 +68,7 @@
   }
 
   // @note Overall Status
+  // imp for clearid - gets all applicable reqs
   var util = new sn_imt_core.EmployeeReadinessCoreUtil();
   var result = util.getUserReadinessStatus(
     "employee",
@@ -73,12 +76,13 @@
     gr_reservation.location
   );
   var userResult = result.user_result;
+  gs.info("userResult \n" + JSON.stringify(result));
 
   if (userResult.error && userResult.error_message) {
     data.user_error_message = userResult.error_message;
     return;
   }
-
+  // not req for clearid
   for (var v in result.reqs) {
     var t = result.reqs[v];
     if (t.requirement_name == "Shift / Reservation Requirement") {
@@ -194,7 +198,7 @@
     i = i + 1;
   }
 
-  // gs.warn("RC array is " + JSON.stringify(data.vaccine_action_list));
+  // gs.warn("RC array new is " + JSON.stringify(data.vaccine_action_list_new));
 
   function findHealthAndSafetyUser(user) {
     var healthAndSafetyGr = new GlideRecord(

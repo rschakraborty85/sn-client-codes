@@ -47,11 +47,20 @@
       <div class="col-xs-3 padder-l-none padder-r-none location-column">
         <div class="user-status">
           <span
-            class="label sc-field-error-label"
+            class="label sc-field-error-label not_bold"
             ng-class="{'cleared' : item.requirements_status.status, 'not-cleared' : !item.requirements_status.status}"
           >
-            <i class="fa fa-circle"></i
-            >{{item.requirements_status.statusMessage}}
+            <i
+              ng-if="item.requirements_status.status"
+              class="fa fa-circle"
+              style="color: #1e856d"
+            ></i>
+            <i
+              ng-if="!item.requirements_status.status"
+              class="fa fa-circle"
+              style="color: #cd3e3e"
+            ></i>
+            {{item.requirements_status.statusMessage}}
           </span>
         </div>
       </div>

@@ -326,7 +326,7 @@
               data.cleared_none = false;
               // @note RC STRY2462915 - if no requirement - show none
               if (data.reqs.length == 0 && !data.isEhsRequired) {
-                data.cleared_message = "No requirement";
+                data.cleared_message = "No requirements";
                 data.cleared_none = true;
                 data.cleared = false;
               }

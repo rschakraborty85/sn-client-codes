@@ -2,8 +2,54 @@ var WSDSearchService = Class.create();
 WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
   type: "WSDSearchService",
 
+  /** @debug - RC - overriding to test
+   * This method is responsible for getting all the filters across the
+   * building.
+   * @return {Filter} constructed filter data
+   * @private
+   */
+  _resolveAndConstructAllFilterData: function (
+    buildingId,
+    reservableTable,
+    reservableEncodedQuery,
+    standardServices,
+    reservablePurposes,
+    eligibleLocData
+  ) {
+    try {
+      var filter = {
+        floors: [],
+        standard_services: [],
+        reservable_purposes: [],
+      };
+
+      var eligibleLocationIds = [];
+      // If it is map view, we have already filled this object. We will be populating this object in _checkFloorCriteriaPresentForMap method
+      if (this.eligibleLocsAndFloorsForTypeAndBuilding)
+        filter.floors = this.eligibleLocsAndFloorsForTypeAndBuilding.floors;
+      // If it is not map view, we haven't computed the filter.floors. EligibleLocData is already calculated, we can directly build the floors.
+      // @debug RC
+      else
+        filter.floors = this._getFloorsOfSelectedBuilding(
+          buildingId,
+          true,
+          eligibleLocData.eligibleFloorIds
+        );
+
+      // construct standard services
+      filter.standard_services = standardServices;
+
+      // construct reservable purposes
+      filter.reservable_purposes = reservablePurposes;
+      return this._sortFilterData(filter);
+    } catch (error) {
+      gs.error("RC _resolveAndConstructAllFilterData " + error);
+    }
+  },
+
   /**
    * RC - override
+   * RC - [11th feb merged code again]
    * RC 17th jan - merged with newly changed oob code
    * For the glideRecord provided, process for available reservable units based on search filter, start and end time
    * @param {GlideRecord} reservableGr - GlideRecord to get reservables from
@@ -23,7 +69,16 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
    * @param {string} [reservableContainerField] - field of the container within the reservable table (example: reservable table is Space, container field is area)
    * @param {string} [reservableQuantityField] - name of the field to check for reservation capacity.
    * @param {ReservableContainer[]} [reservableContainers] - list of container that has been added for container selection type search
+   * @param {number} [bestMatchCount] - when given, the result will return the exact number of reservable (no pagination), the availablity is then only processed until the total number is matched
    * @param {ReservableUnitCallback} [callback]
+   * @param {GlideRecord} nearByLocationGr - Glide record of location where near by user belongs to
+   * @param {string} [buildingId] - sys_id of the building
+   * @param {string} [reservableEncodedQuery] - final reservable encoded query after applying all conditions - cost center, space management etc.
+   * @param {string} [reservableTable] - target table name
+   * @param {number} [searchLimit] - specifies the window that should be scanned on the reservableTable, will be window end only when nextItemIndex is 0.
+   * @param {string} [extraConditions] - extra encoded query that will be used to filter out reservable - should not overlap with the reservable filter
+   * @param {string} [view] - tells us about the viewType like : CARD, SCHEDULE, MAP
+   * @param {number} [nextItemIndex] - the first row to include (indicates the first row index to start windowing) (0 on the first page)
    * @return {ResolvedReservablesOutput} - array of matched reservable units (the properties of each unit is configured in the reservable module under field: reservable_columns)
    * @private
    */
@@ -48,7 +103,14 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
     reservableContainers,
     bestMatchCount,
     callback,
-    nearByLocationGr
+    nearByLocationGr,
+    buildingId,
+    reservableEncodedQuery,
+    reservableTable,
+    searchLimit,
+    extraConditions,
+    view,
+    nextItemIndex
   ) {
     reservableContainers = reservableContainers || [];
     bestMatchCount = bestMatchCount || 0;
@@ -68,6 +130,99 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
     );
     var isSelectionTypeContainer =
       selectionType === WSDConstants.RESERVABLE_MODULE_SELECTION_TYPE.container;
+    var eligibleLocIds;
+    var eligibleLocData; //Object which stores the eligibleLocIds and areas, floors and buildings of the eligibleLocIds.
+    var reservationData, eligibleLocAreaFloorBuildingIds;
+    var standardServices = [],
+      reservablePurposes = [];
+
+    //In map view and Facet filter OFF, we are already fetching the eligibleLocationsData in _checkFloorMapCriteria function.
+    if (this.eligibleLocsAndFloorsForTypeAndBuilding) {
+      eligibleLocData = this.eligibleLocsAndFloorsForTypeAndBuilding
+        .eligibleLocData;
+      eligibleLocIds = eligibleLocData.eligibleLocationIds;
+    }
+
+    /* Cache the standard services and reservable purposes available for each reservable in reseravable module
+        If includeStandardServices is true, then cache the standardservices for all the reservables in reservable module.*/
+    if (includeStandardServices) {
+      if (!eligibleLocIds) {
+        eligibleLocData = this._getEligibleLocData(
+          buildingId,
+          reservableTable,
+          reservableEncodedQuery,
+          nearByLocationGr,
+          searchLimit,
+          nextItemIndex,
+          extraConditions,
+          view
+        );
+        eligibleLocIds = eligibleLocData
+          ? eligibleLocData.eligibleLocationIds
+          : null;
+      }
+      //Store the constructed list of standard services available across eligibleLocIds.
+      standardServices = eligibleLocIds
+        ? this._prepareStandardServicesForEligibleLocs(eligibleLocIds)
+        : [];
+    }
+
+    /* If includeReservablePurposes is true, then cache the reservablePurposes for all the reservables in reservable module.*/
+    if (includeReservablePurposes) {
+      if (!eligibleLocIds) {
+        eligibleLocData = this._getEligibleLocData(
+          buildingId,
+          reservableTable,
+          reservableEncodedQuery,
+          nearByLocationGr,
+          searchLimit,
+          nextItemIndex,
+          extraConditions,
+          view
+        );
+        eligibleLocIds = eligibleLocData
+          ? eligibleLocData.eligibleLocationIds
+          : null;
+      }
+      //Store the constructed list of reservable purposes available across eligibleLocIds.
+      reservablePurposes = eligibleLocIds
+        ? this._prepareReservablePurposesForEligibleLocs(eligibleLocIds)
+        : [];
+    }
+
+    eligibleLocData = eligibleLocData
+      ? eligibleLocData
+      : this._getEligibleLocData(
+          buildingId,
+          reservableTable,
+          reservableEncodedQuery,
+          nearByLocationGr,
+          searchLimit,
+          nextItemIndex,
+          extraConditions,
+          view
+        );
+    eligibleLocIds = eligibleLocData
+      ? eligibleLocData.eligibleLocationIds
+      : null;
+    eligibleLocAreaFloorBuildingIds = eligibleLocData
+      ? eligibleLocData.eligibleLocationIds +
+        "," +
+        eligibleLocData.eligibleAreaIds +
+        "," +
+        eligibleLocData.eligibleFloorIds +
+        "," +
+        eligibleLocData.eligibleBuildingId
+      : null; //Concatenated string of eligible loc, area, floor and building Ids - used in blockLocation query of availability checking
+
+    //Prepare the reservationData for the eligibleLocations before processing (improves search page load performance)
+    reservationData = this.availabilityService.prepareReservationData(
+      eligibleLocIds,
+      reservableType,
+      startGdt,
+      endGdt,
+      includeReservationsWithinDays
+    );
 
     // process each reservable unit, check availability and check against extra condition
 
@@ -193,13 +348,16 @@ WSDSearchService.prototype = Object.extendsObject(WSDSearchServiceSNC, {
           break;
       }
     }
-
+    this.cacheUtils.clearCache(); //Clear the cache after the while loop.
     return {
       reservableContainers: reservableContainers,
       reservableUnits: reservableUnits,
       recordProcessedForResult: recordProcessedForResult,
       recordProcessedForResult: recordProcessedForResult,
       totalProcessed: totalProcessed,
+      standardServices: standardServices,
+      reservablePurposes: reservablePurposes,
+      eligibleLocData: eligibleLocData,
     };
   },
 
